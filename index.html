@@ -363,12 +363,6 @@
       { id: "ice", name: "Ice", swatch: "#dff7ff" },
       { id: "periwinkle", name: "Periwinkle", swatch: "#c9d8ff" }
     ];
-    const HOME_SCREENS = [
-      { id: "lab", label: "Lab" },
-      { id: "tasks", label: "Tasks" },
-      { id: "progress", label: "Progress" },
-      { id: "style", label: "Style" }
-    ];
 
     function formatDate(iso) {
       if (!iso) return "not yet";
@@ -393,7 +387,6 @@
 
     function App() {
       const [activeId, setActiveId] = useState("");
-      const [homeScreen, setHomeScreen] = useState("lab");
       const [mobileOpen, setMobileOpen] = useState(false);
       const [showSplash, setShowSplash] = useState(true);
       const [historyRows, setHistoryRows] = window.LabStore.useStoredState(window.LabStore.RESULTS_KEY, []);
@@ -427,13 +420,6 @@
 
       function goHome() {
         setActiveId("");
-        setHomeScreen("lab");
-        window.history.replaceState(null, "", location.pathname);
-        setMobileOpen(false);
-      }
-      function openScreen(id) {
-        setActiveId("");
-        setHomeScreen(id);
         window.history.replaceState(null, "", location.pathname);
         setMobileOpen(false);
       }
@@ -449,17 +435,6 @@
       function clearHistory() {
         setHistoryRows([]);
       }
-      function screenTabs(className) {
-        return (
-          <nav className={className} aria-label="app screens">
-            {HOME_SCREENS.map((screen, i) => (
-              <button key={screen.id} className={!activeTask && homeScreen === screen.id ? "active" : ""} onClick={() => openScreen(screen.id)}>
-                <span>{String(i + 1).padStart(2, "0")}</span>{screen.label}
-              </button>
-            ))}
-          </nav>
-        );
-      }
 
       return (
         <>
@@ -469,8 +444,7 @@
             <header className="shell-header">
               <button className="mobile-menu-btn" onClick={() => setMobileOpen(true)} aria-label="open task menu"><span></span><span></span><span></span></button>
               <Brand onClick={goHome} />
-              {screenTabs("screen-tabs header-screen-tabs")}
-              <div className="header-meta"><span>{activeTask ? activeTask.category : HOME_SCREENS.find((screen) => screen.id === homeScreen)?.label}</span><span>{taskCount} tasks</span></div>
+              <div className="header-meta"><span>{taskCount} tasks</span><span>{CATEGORIES.length} domains</span></div>
             </header>
             <aside className="sidebar">
               <Brand home active={!activeId} onClick={goHome} />
@@ -500,20 +474,13 @@
               <div className="main-inner">
                 {!activeTask ? (
                   <>
-                    {homeScreen === "lab" && (
                     <section className="home-hero">
                       <div className="hero-copy">
                         <h1>cognitive <em>lab.</em></h1>
                         <p className="lede"><span>Play classical psychology tasks.</span><span>Save runs and explore by domain.</span></p>
                         <div className="stats"><span>{taskCount} tasks</span><span>{completedIds.size} completed</span><span>{historyRows.length} saved runs</span></div>
-                        <div className="hero-actions">
-                          <button className="primary-btn" onClick={() => openScreen("tasks")}>open tasks</button>
-                          <button className="ghost-btn" onClick={() => openScreen("progress")}>view progress</button>
-                        </div>
                       </div>
                     </section>
-                    )}
-                    {homeScreen === "progress" && (
                     <section className="lab-dashboard">
                       <div className="dashboard-card progress-card">
                         <div className="dashboard-label">progress</div>
@@ -545,9 +512,18 @@
                           ))}
                         </div>
                       </div>
+                      <div className="dashboard-card theme-card">
+                        <div className="dashboard-label">pastel theme</div>
+                        <div className="theme-switcher">
+                          {THEMES.map((t) => (
+                            <button className={theme === t.id ? "active" : ""} key={t.id} onClick={() => setTheme(t.id)}>
+                              <i style={{ background: t.swatch }}></i>{t.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </section>
-                    )}
-                    {homeScreen === "progress" && favoriteTasks.length ? (
+                    {favoriteTasks.length ? (
                       <section className="favorites-strip">
                         <div className="category-label"><span>fav</span><strong>favorites</strong><i></i><b>{favoriteTasks.length}</b></div>
                         <div className="favorite-row">
@@ -557,8 +533,6 @@
                         </div>
                       </section>
                     ) : null}
-                    {homeScreen === "tasks" && (
-                    <>
                     <div className="domain-strip">
                       {CATEGORIES.map((cat, ci) => (
                         <button key={cat.name} onClick={() => chooseTask(cat.tasks[0].id)}>
@@ -568,6 +542,8 @@
                         </button>
                       ))}
                     </div>
+                    <CursorField />
+                    <Ticker />
                     {filtered.map((cat) => {
                       const ci = CATEGORIES.findIndex((c) => c.name === cat.name);
                       return (
@@ -591,24 +567,6 @@
                         </section>
                       );
                     })}
-                    </>
-                    )}
-                    {homeScreen === "style" && (
-                    <section className="style-screen">
-                      <div className="dashboard-card theme-card style-card">
-                        <div className="dashboard-label">pastel theme</div>
-                        <div className="theme-switcher">
-                          {THEMES.map((t) => (
-                            <button className={theme === t.id ? "active" : ""} key={t.id} onClick={() => setTheme(t.id)}>
-                              <i style={{ background: t.swatch }}></i>{t.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <CursorField />
-                      <Ticker />
-                    </section>
-                    )}
                     <footer className="home-footer">not a clinical instrument · for curiosity only</footer>
                   </>
                 ) : (
@@ -642,7 +600,6 @@
                 )}
               </div>
             </main>
-            {!activeTask && screenTabs("screen-tabs bottom-screen-tabs")}
           </div>
         </>
       );

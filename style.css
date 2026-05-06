@@ -348,43 +348,6 @@ em { color: #93d9ff; font-style: italic; }
   letter-spacing: 0.16em;
   color: #9fc9e8;
 }
-.screen-tabs {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.screen-tabs button {
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid rgba(125, 211, 252, 0.22);
-  border-radius: 8px;
-  background: rgba(232, 246, 255, 0.07);
-  color: #dff5ff;
-  padding: 0 12px;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  transition: transform 0.18s, background 0.18s, border-color 0.18s, box-shadow 0.18s;
-}
-.screen-tabs button:hover {
-  transform: translateY(-1px);
-  background: rgba(56, 189, 248, 0.13);
-  border-color: rgba(125, 211, 252, 0.42);
-}
-.screen-tabs button.active {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.24), rgba(125, 211, 252, 0.12));
-  border-color: rgba(125, 211, 252, 0.58);
-  box-shadow: 0 10px 24px rgba(56, 189, 248, 0.14);
-}
-.screen-tabs span {
-  color: #7dd3fc;
-}
-.bottom-screen-tabs {
-  display: none;
-}
 .live-pill {
   display: inline-flex;
   align-items: center;
@@ -554,24 +517,6 @@ em { color: #93d9ff; font-style: italic; }
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: #e5f7ff;
-}
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 4px;
-}
-.hero-actions .primary-btn,
-.hero-actions .ghost-btn {
-  min-height: 44px;
-  padding-inline: 18px;
-}
-.style-screen {
-  display: grid;
-  gap: 14px;
-}
-.style-card {
-  min-height: 150px;
 }
 .visual-board {
   position: relative;
@@ -2139,7 +2084,6 @@ body::before {
 em,
 .home-glyph,
 .search-box span,
-.screen-tabs span,
 .sidebar-link span,
 .category-label span,
 .category-label b,
@@ -2195,7 +2139,6 @@ em,
   box-shadow: 0 0 16px rgba(79, 195, 247, 0.65);
 }
 .search-box,
-.screen-tabs button,
 .home-brand,
 .stats span,
 .dashboard-card,
@@ -2215,7 +2158,6 @@ textarea,
   box-shadow: 0 16px 42px rgba(50, 125, 184, 0.14);
 }
 .home-brand.active,
-.screen-tabs button.active,
 .sidebar-link.active,
 .theme-switcher button.active,
 .favorite-btn.active,
@@ -2226,7 +2168,6 @@ textarea,
 .live-pill,
 .kbd,
 .mini-action,
-.screen-tabs button,
 .favorite-row button,
 .favorite-wide,
 .favorite-btn,
@@ -2302,15 +2243,6 @@ textarea,
   border-color: #157db8;
   box-shadow: 0 14px 30px rgba(39, 144, 210, 0.28);
 }
-.screen-tabs button:hover {
-  background: #dff2ff;
-  border-color: rgba(29, 134, 197, 0.62);
-}
-.bottom-screen-tabs {
-  background: rgba(238, 248, 255, 0.9);
-  border-color: rgba(55, 136, 196, 0.38);
-  box-shadow: 0 -18px 44px rgba(50, 125, 184, 0.16);
-}
 .badge {
   background: rgba(255, 255, 255, 0.58);
   border-color: rgba(55, 136, 196, 0.42);
@@ -2363,6 +2295,7 @@ textarea,
   .shell-header { background: rgba(234, 247, 255, 0.94); }
   .home-hero { background: rgba(255, 255, 255, 0.84); }
   .home-hero {
+    width: calc(100vw - 20px);
     max-width: calc(100vw - 20px);
   }
   .home-hero,
@@ -2371,59 +2304,16 @@ textarea,
     min-width: 0;
     overflow-wrap: anywhere;
   }
+  .hero-copy {
+    width: min(100%, calc(100vw - 56px));
+    max-width: calc(100vw - 56px);
+  }
   .lede {
+    display: block;
+    width: 100%;
+    max-width: 100%;
     font-size: 17px;
     line-height: 1.36;
-  }
-  .header-screen-tabs { display: none; }
-  nav.bottom-screen-tabs.screen-tabs {
-    position: fixed;
-    left: 50%;
-    right: auto;
-    bottom: 10px;
-    width: min(370px, calc(100vw - 20px));
-    z-index: 18;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-    padding: 7px;
-    border: 1px solid rgba(55, 136, 196, 0.38);
-    border-radius: 14px;
-    backdrop-filter: blur(18px);
-    overflow: hidden;
-    transform: translateX(-50%);
-  }
-  nav.bottom-screen-tabs.screen-tabs button {
-    width: 100%;
-    min-width: 0;
-    min-height: 48px;
-    overflow: hidden;
-    flex-direction: column;
-    justify-content: center;
-    gap: 4px;
-    padding: 5px 4px;
-    border-radius: 10px;
-    font-size: 8px;
-    letter-spacing: 0.06em;
-    white-space: nowrap;
-  }
-  nav.bottom-screen-tabs.screen-tabs button span {
-    display: block;
-    font-size: 9px;
-  }
-  .home-view .main-inner {
-    padding-bottom: 98px;
-  }
-  .home-footer {
-    display: none;
-  }
-  .hero-actions {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-  .hero-actions .primary-btn,
-  .hero-actions .ghost-btn {
-    width: 100%;
   }
   .logo-splash {
     background-size: 34px 34px, 34px 34px, auto;
