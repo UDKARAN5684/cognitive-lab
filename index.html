@@ -497,13 +497,22 @@
 
       useEffect(() => {
         const main = document.querySelector(".main");
-        if (!main) return;
         function onScroll() {
-          setShowStickyStart(main.scrollTop > 280);
+          const pageScroll = Math.max(
+            main ? main.scrollTop : 0,
+            window.scrollY || 0,
+            document.documentElement.scrollTop || 0,
+            document.body.scrollTop || 0
+          );
+          setShowStickyStart(!activeId && pageScroll > 280);
         }
         onScroll();
-        main.addEventListener("scroll", onScroll, { passive: true });
-        return () => main.removeEventListener("scroll", onScroll);
+        if (main) main.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("scroll", onScroll, { passive: true });
+        return () => {
+          if (main) main.removeEventListener("scroll", onScroll);
+          window.removeEventListener("scroll", onScroll);
+        };
       }, [activeId]);
 
       useEffect(() => {

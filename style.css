@@ -1293,13 +1293,16 @@ textarea,
   .live-pill { display: none; }
   .sidebar { display: none; }
   .main {
+    position: fixed;
     left: 0;
-    right: auto;
+    right: 0;
     width: 100vw;
     top: 62px;
-    position: absolute;
-    min-height: calc(100vh - 62px);
-    overflow: visible;
+    bottom: 0;
+    min-height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .main-inner {
     width: 100vw;
