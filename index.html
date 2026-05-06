@@ -95,7 +95,7 @@
         if (text.includes("click")) return "click";
         if (text.includes("type")) return "typing";
       }
-      return "keyboard / click";
+      return "touch buttons / keyboard";
     }
 
     function dateKey(value = new Date()) {
@@ -118,12 +118,105 @@
       return streak;
     }
 
+    function nodeText(node) {
+      if (node == null || node === false) return "";
+      if (typeof node === "string" || typeof node === "number") return String(node);
+      if (Array.isArray(node)) return node.map(nodeText).join("");
+      if (React.isValidElement(node)) return nodeText(node.props.children);
+      return "";
+    }
+
+    function keyboardLabels(node) {
+      const labels = [];
+      function walk(value) {
+        if (value == null || value === false) return;
+        if (Array.isArray(value)) {
+          value.forEach(walk);
+          return;
+        }
+        if (!React.isValidElement(value)) return;
+        const className = String(value.props.className || "");
+        if (className.split(/\s+/).includes("kbd")) {
+          labels.push(nodeText(value.props.children));
+          return;
+        }
+        walk(value.props.children);
+      }
+      walk(node);
+      return labels;
+    }
+
+    function virtualKey(rawLabel) {
+      const compact = String(rawLabel || "").replace(/\s+/g, "");
+      const lower = compact.toLowerCase();
+      if (!compact) return null;
+      if (lower.includes("space")) return { label: "tap", key: " ", code: "Space" };
+      if (compact.includes("\u2190") || compact.includes("\u00e2\u2020\u0090")) return { label: "left", key: "ArrowLeft", code: "ArrowLeft" };
+      if (compact.includes("\u2192") || compact.includes("\u00e2\u2020\u2019")) return { label: "right", key: "ArrowRight", code: "ArrowRight" };
+      if (/^[a-z]$/i.test(compact)) return { label: compact.toUpperCase(), key: compact.toLowerCase(), code: `Key${compact.toUpperCase()}` };
+      if (/^\d$/.test(compact)) return { label: compact, key: compact, code: `Digit${compact}` };
+      return null;
+    }
+
+    function virtualKeys(instructions) {
+      const controls = keyboardLabels(instructions)
+        .flatMap((label) => String(label).split("/"))
+        .map(virtualKey)
+        .filter(Boolean);
+      const seen = new Set();
+      return controls.filter((control) => {
+        const id = `${control.key}:${control.code}`;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+    }
+
+    function pressVirtualKey(control) {
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        key: control.key,
+        code: control.code,
+        bubbles: true,
+        cancelable: true
+      }));
+    }
+
+    function TouchControls({ controls }) {
+      if (!controls.length) return null;
+      return (
+        <div className="touch-controls" aria-label="phone controls">
+          <span>phone controls</span>
+          <div>
+            {controls.map((control) => (
+              <button
+                type="button"
+                key={`${control.key}-${control.code}`}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  pressVirtualKey(control);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    pressVirtualKey(control);
+                  }
+                }}
+              >
+                {control.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     function GameShell({ cite, instructions, phase, headline, explain, onBegin, onReset, children, footer, results, doneText, doneExtra }) {
       const task = useContext(TaskContext);
       const savedSignature = useRef("");
       const [shareState, setShareState] = useState("");
       const taskRuns = task ? readStore(RESULTS_KEY, []).filter((r) => r.taskId === task.id) : [];
       const resultSignature = phase === "done" && results ? JSON.stringify(results.map((r) => [r.label, String(r.value)])) : "";
+      const controls = virtualKeys(instructions);
 
       async function shareResults() {
         if (!task || !results?.length) return;
@@ -224,7 +317,10 @@
       return (
         <section className="game-shell">
           <div className="game-instructions">{instructions}</div>
-          <div className="task-stage">{children}</div>
+          <div className="task-stage">
+            {children}
+            <TouchControls controls={controls} />
+          </div>
           <div className="game-footer">{footer}</div>
         </section>
       );

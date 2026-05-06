@@ -882,11 +882,14 @@ em { color: #93d9ff; font-style: italic; }
     linear-gradient(135deg, #eaf6ff, #cde9fb);
   border: 1px solid rgba(125, 211, 252, 0.24);
   display: grid;
-  place-items: center;
+  align-items: center;
+  justify-items: center;
+  gap: 18px;
   padding: 26px;
   position: relative;
   transition: background 0.18s;
   overflow: hidden;
+  text-align: center;
 }
 .task-stage::before {
   content: "";
@@ -898,7 +901,11 @@ em { color: #93d9ff; font-style: italic; }
     linear-gradient(0deg, rgba(8, 32, 51, 0.045) 1px, transparent 1px);
   background-size: 36px 36px;
 }
-.task-stage > * { position: relative; z-index: 1; }
+.task-stage > * {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+}
 .task-card {
   width: min(640px, 100%);
   border: 1px solid rgba(8, 80, 136, 0.18);
@@ -954,10 +961,13 @@ em { color: #93d9ff; font-style: italic; }
 }
 .game-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 14px;
   padding: 11px 2px;
   color: #9fc9e8;
+  text-align: center;
 }
 .result-grid {
   display: grid;
@@ -1009,6 +1019,59 @@ em { color: #93d9ff; font-style: italic; }
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
+  align-items: center;
+  max-width: 100%;
+}
+.touch-controls {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 14px;
+  border: 1px solid rgba(8, 80, 136, 0.18);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(198, 235, 255, 0.64)),
+    rgba(255, 255, 255, 0.66);
+  box-shadow: 0 16px 38px rgba(50, 125, 184, 0.14);
+}
+.touch-controls span {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #4f718d;
+}
+.touch-controls div {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.touch-controls button {
+  min-width: 76px;
+  min-height: 48px;
+  border: 1px solid rgba(21, 125, 184, 0.48);
+  border-radius: 10px;
+  background: linear-gradient(135deg, #34b7ef, #78bfff);
+  color: #08253a;
+  box-shadow: 0 12px 26px rgba(52, 183, 239, 0.22);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  touch-action: manipulation;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+.touch-controls button:active {
+  transform: scale(0.97);
+  box-shadow: 0 8px 18px rgba(52, 183, 239, 0.22);
+}
+.touch-controls button:focus-visible {
+  outline: 3px solid rgba(79, 195, 247, 0.38);
+  outline-offset: 2px;
 }
 .pill-row {
   display: flex;
@@ -1342,6 +1405,13 @@ textarea,
   .history-block p { font-size: 19px; }
   .task-stage { padding: 18px; }
   .result-grid { grid-template-columns: 1fr; }
+  .touch-controls {
+    padding: 12px;
+  }
+  .touch-controls button {
+    flex: 1 1 calc(50% - 10px);
+    min-width: 0;
+  }
   .hanoi {
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
