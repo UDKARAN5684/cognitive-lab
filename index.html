@@ -307,6 +307,28 @@
       );
     }
 
+    function LogoSplash() {
+      return (
+        <div className="logo-splash" aria-label="opening cognitive lab">
+          <div className="splash-field" aria-hidden="true">
+            <span className="splash-orbit orbit-one"></span>
+            <span className="splash-orbit orbit-two"></span>
+            <span className="splash-mark">
+              <svg viewBox="0 0 80 80">
+                <path className="splash-ring" d="M18 45c0-16.4 12.6-28 29-28 10.3 0 18.6 4.9 23.1 12.4" />
+                <path className="splash-ring" d="M18 45c0 13.1 9.8 21.8 22.7 21.8 8.9 0 15.6-3.6 20.8-9.8" />
+                <path className="splash-wave" d="M29 43h10l4.6-9.4 6.7 20 4.2-10.6H66" />
+                <circle cx="18" cy="45" r="4.4" />
+                <circle cx="66" cy="43" r="4.4" />
+              </svg>
+            </span>
+            <span className="splash-word"><b>cognitive</b><em>lab</em></span>
+            <span className="splash-loader"><i></i></span>
+          </div>
+        </div>
+      );
+    }
+
     function CursorField() {
       const [points, setPoints] = useState([]);
       function move(e) {
@@ -367,6 +389,7 @@
       const [query, setQuery] = useState("");
       const [activeId, setActiveId] = useState("");
       const [mobileOpen, setMobileOpen] = useState(false);
+      const [showSplash, setShowSplash] = useState(true);
       const [historyRows, setHistoryRows] = window.LabStore.useStoredState(window.LabStore.RESULTS_KEY, []);
       const [favorites, setFavorites] = window.LabStore.useStoredState(window.LabStore.FAVORITES_KEY, []);
       const [theme, setTheme] = window.LabStore.useStoredState(window.LabStore.THEME_KEY, "powder");
@@ -390,6 +413,11 @@
       useEffect(() => {
         document.documentElement.dataset.theme = theme;
       }, [theme]);
+
+      useEffect(() => {
+        const timer = window.setTimeout(() => setShowSplash(false), 2600);
+        return () => window.clearTimeout(timer);
+      }, []);
 
       useEffect(() => {
         const onHash = () => setActiveId(location.hash.replace("#", ""));
@@ -419,6 +447,7 @@
       return (
         <>
           <div className="ambient"><i></i><i></i><i></i></div>
+          {showSplash && <LogoSplash />}
           <div className={`${activeTask ? "app-shell task-view" : "app-shell home-view"} ${mobileOpen ? "nav-open" : ""}`}>
             <header className="shell-header">
               <button className="mobile-menu-btn" onClick={() => setMobileOpen(true)} aria-label="open task menu"><span></span><span></span><span></span></button>
@@ -428,7 +457,6 @@
                 <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="search tasks, citations, constructs, names…" />
               </label>
               <div className="header-meta"><span>{taskCount} tasks</span><span>{CATEGORIES.length} domains</span></div>
-              <div className="live-pill"><i></i>live</div>
             </header>
             <aside className="sidebar">
               <Brand home active={!activeId} onClick={goHome} />
@@ -463,23 +491,6 @@
                         <h1>cognitive <em>lab.</em></h1>
                         <p className="lede">A playable reference library of classical psychology tasks: a desk of tiny experiments, warm biographies, and citations you can actually touch.</p>
                         <div className="stats"><span>{taskCount} tasks</span><span>{completedIds.size} completed</span><span>{historyRows.length} saved runs</span></div>
-                      </div>
-                      <div className="visual-board" aria-hidden="true">
-                        <span className="scan-line"></span>
-                        <i className="node-a"></i>
-                        <i className="node-b"></i>
-                        <i className="node-c"></i>
-                        <i className="node-d"></i>
-                        <svg viewBox="0 0 420 250" role="img">
-                          <path d="M48 172 C108 76 158 202 214 114 S322 68 376 154" />
-                          <path d="M70 74 L142 142 L212 92 L284 168 L352 82" />
-                          <circle cx="70" cy="74" r="7" />
-                          <circle cx="142" cy="142" r="7" />
-                          <circle cx="212" cy="92" r="7" />
-                          <circle cx="284" cy="168" r="7" />
-                          <circle cx="352" cy="82" r="7" />
-                        </svg>
-                        <strong>live task field</strong>
                       </div>
                     </section>
                     <section className="lab-dashboard">
