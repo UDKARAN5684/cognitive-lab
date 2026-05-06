@@ -1848,3 +1848,248 @@ textarea,
     max-width: 180px;
   }
 }
+
+/* Brighter pastel contrast pass */
+:root {
+  --paper: #e8f6ff;
+  --paper-card: #f7fcff;
+  --paper-deep: #c7e8ff;
+  --ink: #0d2b44;
+  --ink-soft: #375f7e;
+  --ink-faint: #668da9;
+  --ink-line: rgba(60, 147, 208, 0.42);
+  --persimmon: #4fc3f7;
+  --blue: #3a93d2;
+  --ochre: #86d9ff;
+  --green: #78bfff;
+  --screen: #e3f5ff;
+  --screen-soft: #cfeaff;
+  --glow: rgba(79, 195, 247, 0.42);
+}
+
+body {
+  background:
+    radial-gradient(circle at 14% 9%, rgba(93, 190, 245, 0.58), transparent 31%),
+    radial-gradient(circle at 88% 16%, rgba(105, 164, 238, 0.52), transparent 34%),
+    radial-gradient(circle at 50% 92%, rgba(69, 170, 225, 0.38), transparent 42%),
+    linear-gradient(135deg, #f5fbff 0%, #dff2ff 43%, #b9ddfb 100%);
+}
+body::before {
+  background:
+    linear-gradient(90deg, rgba(55, 136, 196, 0.16) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(55, 136, 196, 0.16) 1px, transparent 1px);
+}
+em,
+.home-glyph,
+.search-box span,
+.sidebar-link span,
+.category-label span,
+.category-label b,
+.domain-strip span,
+.domain-strip b,
+.game-card em,
+.favorite-row span,
+.game-card.completed::after {
+  color: #1d86c5;
+}
+.shell-header {
+  background: rgba(234, 247, 255, 0.9);
+  border-bottom-color: rgba(55, 136, 196, 0.42);
+  box-shadow: 0 16px 38px rgba(50, 125, 184, 0.16);
+}
+.brand,
+.home-hero h1,
+.game-card strong,
+.task-headbar h2,
+.task-headline,
+.result-tile strong,
+.dashboard-card strong,
+.task-info-panel dd,
+.text-input {
+  color: #0d2b44;
+}
+.word-serif,
+.stats span,
+.visual-board strong,
+.domain-strip button,
+.domain-strip strong,
+.category-label strong,
+.task-explain,
+.task-info-panel p,
+.history-block p,
+.game-card p,
+.game-card small,
+.dashboard-card > span,
+.empty-note {
+  color: #375f7e;
+}
+.mark {
+  border-color: rgba(55, 136, 196, 0.5);
+  box-shadow: 0 12px 28px rgba(50, 125, 184, 0.2);
+}
+.mark path { stroke: #1d86c5; }
+.mark circle,
+.live-pill i,
+.history-block h3 i,
+.cursor-field i {
+  fill: #4fc3f7;
+  background: #4fc3f7;
+  box-shadow: 0 0 16px rgba(79, 195, 247, 0.65);
+}
+.search-box,
+.home-brand,
+.stats span,
+.dashboard-card,
+.domain-strip button,
+.cursor-field,
+.game-card,
+.history-block,
+.task-info-panel,
+.task-card,
+.result-tile,
+.sort-card,
+.pill,
+textarea,
+.text-input {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(55, 136, 196, 0.42);
+  box-shadow: 0 16px 42px rgba(50, 125, 184, 0.14);
+}
+.home-brand.active,
+.sidebar-link.active,
+.theme-switcher button.active,
+.favorite-btn.active,
+.favorite-wide.active {
+  background: #cfeeff;
+  border-color: rgba(29, 134, 197, 0.58);
+}
+.live-pill,
+.kbd,
+.mini-action,
+.favorite-row button,
+.favorite-wide,
+.favorite-btn,
+.theme-switcher button,
+.ghost-btn,
+.choice-btn {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(55, 136, 196, 0.46);
+  color: #0d2b44;
+}
+.sidebar {
+  background:
+    linear-gradient(180deg, rgba(238, 248, 255, 0.96), rgba(201, 231, 252, 0.92)),
+    #dff2ff;
+  border-right-color: rgba(55, 136, 196, 0.42);
+}
+.sidebar-link { color: #173c59; }
+.sidebar-link:hover,
+.domain-strip button:hover,
+.game-card:hover,
+.choice-btn:hover,
+.ghost-btn:hover {
+  background: #dff2ff;
+  border-color: rgba(29, 134, 197, 0.62);
+}
+.home-hero,
+.task-headbar {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(196, 232, 255, 0.8)),
+    rgba(255, 255, 255, 0.78);
+  border-color: rgba(55, 136, 196, 0.44);
+  box-shadow: 0 28px 82px rgba(50, 125, 184, 0.18);
+}
+.home-hero h1 em { color: #2698d3; }
+.visual-board,
+.task-stage {
+  background:
+    radial-gradient(circle at 76% 26%, rgba(79, 195, 247, 0.42), transparent 22%),
+    linear-gradient(145deg, #f7fcff, #c9eaff);
+  border-color: rgba(55, 136, 196, 0.48);
+}
+.visual-board svg { stroke: rgba(21, 70, 105, 0.68); }
+.visual-board svg path:first-child {
+  stroke: #32b9f2;
+  filter: drop-shadow(0 0 10px rgba(50, 185, 242, 0.58));
+}
+.visual-board svg circle {
+  fill: #3a93d2;
+  stroke: #f7fcff;
+}
+.visual-board .node-a { background: #78bfff; }
+.visual-board .node-b { background: #86d9ff; }
+.visual-board .node-c { background: #4fc3f7; }
+.scan-line { background: linear-gradient(to bottom, transparent, rgba(79, 195, 247, 0.52), transparent); }
+.progress-line,
+.progress {
+  background: rgba(55, 136, 196, 0.24);
+}
+.progress-line i,
+.primary-btn,
+.mini-bar i,
+.progress i,
+.target-dot,
+.memory-block.on,
+.disc {
+  background: linear-gradient(90deg, #34b7ef, #78bfff);
+}
+.primary-btn {
+  border-color: #2698d3;
+  color: #08253a;
+}
+.primary-btn:hover {
+  border-color: #157db8;
+  box-shadow: 0 14px 30px rgba(39, 144, 210, 0.28);
+}
+.badge {
+  background: rgba(255, 255, 255, 0.58);
+  border-color: rgba(55, 136, 196, 0.42);
+  color: #668da9;
+}
+.badge.earned {
+  background: linear-gradient(135deg, #d7f0ff, rgba(255, 255, 255, 0.88));
+  color: #0d2b44;
+}
+.task-stage::before,
+.visual-board::before {
+  background:
+    linear-gradient(90deg, rgba(55, 136, 196, 0.14) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(55, 136, 196, 0.14) 1px, transparent 1px);
+}
+.shape { border-color: #0d2b44; }
+.shape.green { border-color: #2698d3; }
+.shape.red {
+  border-color: #32b9f2;
+  background: rgba(79, 195, 247, 0.26);
+}
+.peg { border-bottom-color: #0d2b44; }
+.disc { border-color: #0d2b44; }
+
+[data-theme="sky"] body {
+  background:
+    radial-gradient(circle at 16% 10%, rgba(100, 176, 248, 0.56), transparent 32%),
+    radial-gradient(circle at 88% 18%, rgba(67, 180, 235, 0.5), transparent 36%),
+    linear-gradient(135deg, #f5fbff 0%, #dcefff 45%, #afd9fb 100%);
+}
+[data-theme="ice"] body {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(118, 211, 248, 0.42), transparent 32%),
+    radial-gradient(circle at 84% 18%, rgba(156, 210, 250, 0.42), transparent 36%),
+    linear-gradient(135deg, #ffffff 0%, #edfaff 52%, #ccefff 100%);
+}
+[data-theme="periwinkle"] body {
+  background:
+    radial-gradient(circle at 15% 10%, rgba(151, 176, 245, 0.54), transparent 32%),
+    radial-gradient(circle at 86% 18%, rgba(77, 191, 238, 0.45), transparent 36%),
+    linear-gradient(135deg, #f7fbff 0%, #e6eeff 48%, #cad9ff 100%);
+}
+[data-theme="periwinkle"] .primary-btn,
+[data-theme="periwinkle"] .progress-line i,
+[data-theme="periwinkle"] .progress i {
+  background: linear-gradient(90deg, #8fa8ff, #4fc3f7);
+}
+
+@media (max-width: 900px) {
+  .shell-header { background: rgba(234, 247, 255, 0.94); }
+  .home-hero { background: rgba(255, 255, 255, 0.84); }
+}
