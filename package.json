@@ -5,6 +5,7 @@
   "description": "A pastel cognitive task lab with playable psychology tests.",
   "scripts": {
     "start": "python -m http.server 4173",
+    "build": "echo Static app ready for Vercel",
     "vercel-build": "echo Static app ready for Vercel"
   }
 }
