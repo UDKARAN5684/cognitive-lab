@@ -1,0 +1,10 @@
+{
+  "name": "cognitive-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A pastel cognitive task lab with playable psychology tests.",
+  "scripts": {
+    "start": "python -m http.server 4173",
+    "vercel-build": "echo Static app ready for Vercel"
+  }
+}

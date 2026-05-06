@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cognitive Lab</title>
+  <meta name="theme-color" content="#dff7ff">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Cognitive Lab">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="app-icon.svg">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='14' fill='%23f8fdff'/%3E%3Cpath d='M14 28c0-7.3 5.5-12.6 12.5-12.6 4.7 0 8.3 2.2 10.3 5.5M14 28c0 5.8 4.3 9.6 10 9.6 4 0 6.9-1.6 9.2-4.3M19.5 26.2h5.5l2.5-5 3.7 10.6 2.4-5.6h4' fill='none' stroke='%234b9dd0' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='14' cy='28' r='2.7' fill='%238ed7f6'/%3E%3Ccircle cx='38' cy='26.2' r='2.7' fill='%238ed7f6'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel">
+    const { useContext, useEffect, useMemo, useRef, useState } = React;
+
+    const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const choice = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const mean = (arr) => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+    const sd = (arr) => {
+      if (arr.length < 2) return 0;
+      const m = arr.reduce((a, b) => a + b, 0) / arr.length;
+      return Math.round(Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - m, 2), 0) / (arr.length - 1)));
+    };
+    const now = () => performance.now();
+    const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+    const RESULTS_KEY = "cognitive-lab.results.v1";
+    const FAVORITES_KEY = "cognitive-lab.favorites.v1";
+    const THEME_KEY = "cognitive-lab.theme.v1";
+    const TaskContext = React.createContext(null);
+
+    function readStore(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (err) {
+        return fallback;
+      }
+    }
+
+    function writeStore(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+      window.dispatchEvent(new CustomEvent("lab-store", { detail: { key, value } }));
+    }
+
+    function useStoredState(key, fallback) {
+      const [value, setValue] = useState(() => readStore(key, fallback));
+      useEffect(() => {
+        function sync(e) {
+          if (e.type === "storage" && e.key !== key) return;
+          if (e.type === "lab-store" && e.detail?.key !== key) return;
+          setValue(readStore(key, fallback));
+        }
+        window.addEventListener("storage", sync);
+        window.addEventListener("lab-store", sync);
+        return () => {
+          window.removeEventListener("storage", sync);
+          window.removeEventListener("lab-store", sync);
+        };
+      }, [key]);
+      function save(next) {
+        setValue((old) => {
+          const valueToSave = typeof next === "function" ? next(old) : next;
+          writeStore(key, valueToSave);
+          return valueToSave;
+        });
+      }
+      return [value, save];
+    }
+
+    function taskEstimate(task) {
+      if (!task) return "1-2 min";
+      if (task.category === "Personality") return "3 min";
+      if (task.category === "Memory") return "2-4 min";
+      if (task.category === "Reaction Time & Vigilance") return "1-3 min";
+      return "1-2 min";
+    }
+
+    function inputMode(instructions) {
+      if (typeof instructions === "string") {
+        const text = instructions.toLowerCase();
+        if (text.includes("click")) return "click";
+        if (text.includes("type")) return "typing";
+      }
+      return "keyboard / click";
+    }
+
+    function GameShell({ cite, instructions, phase, headline, explain, onBegin, onReset, children, footer, results, doneText, doneExtra }) {
+      const task = useContext(TaskContext);
+      const savedSignature = useRef("");
+      const taskRuns = task ? readStore(RESULTS_KEY, []).filter((r) => r.taskId === task.id) : [];
+      const resultSignature = phase === "done" && results ? JSON.stringify(results.map((r) => [r.label, String(r.value)])) : "";
+
+      useEffect(() => {
+        if (phase !== "done") {
+          savedSignature.current = "";
+          return;
+        }
+        if (!task || !results?.length || !resultSignature || savedSignature.current === resultSignature) return;
+        savedSignature.current = resultSignature;
+        const history = readStore(RESULTS_KEY, []);
+        const entry = {
+          id: `${task.id}-${Date.now()}`,
+          taskId: task.id,
+          title: task.title,
+          category: task.category,
+          cite,
+          at: new Date().toISOString(),
+          results: results.map((r) => ({ label: r.label, value: String(r.value) }))
+        };
+        writeStore(RESULTS_KEY, [entry, ...history].slice(0, 120));
+      }, [phase, task?.id, resultSignature]);
+
+      if (phase === "intro") {
+        return (
+          <section className="game-shell">
+            <div className="game-instructions">{instructions}</div>
+            <div className="task-stage">
+              <div className="task-card">
+                <div className="task-meta">{cite}</div>
+                <h3 className="task-headline">{headline}</h3>
+                <p className="task-explain">{explain}</p>
+                {task && (
+                  <div className="task-intro-meta">
+                    <span><b>time</b>{taskEstimate(task)}</span>
+                    <span><b>input</b>{inputMode(instructions)}</span>
+                    <span><b>runs</b>{taskRuns.length}</span>
+                    <span><b>domain</b>{task.category}</span>
+                  </div>
+                )}
+                <button className="primary-btn" onClick={onBegin}>begin task →</button>
+              </div>
+            </div>
+            <div className="game-footer">{footer || "waiting at the bench"}</div>
+          </section>
+        );
+      }
+      if (phase === "done") {
+        return (
+          <section className="game-shell">
+            <div className="game-instructions">{instructions}</div>
+            <div className="task-stage">
+              <div className="task-card task-results">
+                <div className="task-meta">{cite}</div>
+                <h3 className="task-headline">results</h3>
+                <div className="result-grid">
+                  {results.map((r) => (
+                    <div className="result-tile" key={r.label}>
+                      <span>{r.label}</span>
+                      <strong>{r.value}</strong>
+                    </div>
+                  ))}
+                </div>
+                <p className="task-explain">{doneText}</p>
+                {doneExtra}
+                <button className="ghost-btn" onClick={onReset}>run again →</button>
+              </div>
+            </div>
+            <div className="game-footer">{footer || "not a clinical instrument · for curiosity only"}</div>
+          </section>
+        );
+      }
+      return (
+        <section className="game-shell">
+          <div className="game-instructions">{instructions}</div>
+          <div className="task-stage">{children}</div>
+          <div className="game-footer">{footer}</div>
+        </section>
+      );
+    }
+
+    function MiniBars({ values }) {
+      const max = Math.max(1, ...values.map((v) => Math.abs(v.value)));
+      return (
+        <div className="mini-bars">
+          {values.map((v) => (
+            <div className="mini-bar" key={v.label}>
+              <span>{v.label}</span>
+              <i style={{ width: `${Math.max(8, Math.abs(v.value) / max * 100)}%` }}></i>
+              <b>{v.value}</b>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    window.TaskContext = TaskContext;
+    window.LabStore = { RESULTS_KEY, FAVORITES_KEY, THEME_KEY, readStore, writeStore, useStoredState };
+    window.TaskHelpers = { inputMode, taskEstimate };
+    window.GameKit = { GameShell, MiniBars, rand, choice, mean, sd, now, shuffle, useEffect, useMemo, useRef, useState };
+  </script>
+
+  <script type="text/babel" src="games/stroop.jsx"></script>
+  <script type="text/babel" src="games/nback.jsx"></script>
+  <script type="text/babel" src="games/posner.jsx"></script>
+  <script type="text/babel" src="games/gonogo.jsx"></script>
+  <script type="text/babel" src="games/rotation.jsx"></script>
+  <script type="text/babel" src="games/simon.jsx"></script>
+  <script type="text/babel" src="games/attention_more.jsx"></script>
+  <script type="text/babel" src="games/memory.jsx"></script>
+  <script type="text/babel" src="games/executive.jsx"></script>
+  <script type="text/babel" src="games/perception.jsx"></script>
+  <script type="text/babel" src="games/reaction.jsx"></script>
+  <script type="text/babel" src="games/decision.jsx"></script>
+  <script type="text/babel" src="games/language.jsx"></script>
+  <script type="text/babel" src="games/social.jsx"></script>
+  <script type="text/babel" src="games/meta.jsx"></script>
+  <script type="text/babel" src="games/landmark.jsx"></script>
+  <script type="text/babel" src="games/live.jsx"></script>
+
+  <script type="text/babel">
+    const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
+    const CATEGORIES = [
+      { name: "Attention", tasks: [
+        { id: "stroop", title: "Stroop Test", cite: "Stroop, 1935", who: "John Ridley Stroop", measures: "selective attention · interference", desc: "Name the ink while the word tries to drag your tongue elsewhere.", history: <>A graduate student in Nashville, John Ridley Stroop noticed something strange: when colour words wore the wrong ink, fluent readers suddenly stumbled. He published the work in 1935, then left psychology for a quieter life teaching Bible studies, while his little <em>word-colour trap</em> became immortal.</>, C: () => <window.Stroop /> },
+        { id: "posner", title: "Posner Cueing", cite: "Posner, 1980", who: "Michael Posner", measures: "covert attention · cue validity", desc: "Follow a cue without moving your eyes, then catch the target dot.", history: <>Michael Posner treated attention like a spotlight you could move without moving your head. In the late 1970s, he put arrows, boxes, and millisecond timing into a tidy theatre where the mind could be caught <em>leaning</em> before the body moved.</>, C: () => <window.PosnerCueing /> },
+        { id: "flanker", title: "Flanker Task", cite: "Eriksen & Eriksen, 1974", who: "Barbara and Charles Eriksen", measures: "conflict · response inhibition", desc: "Read the middle arrow while its neighbors heckle from both sides.", history: <>The Eriksens compressed visual distraction into a row of arrows, a small typographic chorus with one soloist in the middle. Their task showed how even irrelevant neighbours can whisper into response selection before you quite notice.</>, C: () => <window.Flanker /> },
+        { id: "visual-search", title: "Visual Search", cite: "Treisman & Gelade, 1980", who: "Anne Treisman", measures: "feature binding · search slope", desc: "Hunt for a red square as the crowd gets bigger and sneakier.", history: <>Anne Treisman was fascinated by the mind's habit of binding colour, shape, and place into objects. Her search displays turned perception into a busy marketplace, where a single feature pops out but a conjunction asks you to inspect the stalls.</>, C: () => <window.VisualSearch /> }
+      ]},
+      { name: "Memory", tasks: [
+        { id: "nback", title: "N-Back", cite: "Kirchner, 1958", who: "Wayne Kirchner", measures: "working memory · updating", desc: "Track a stream of letters and catch the one that echoes N steps back.", history: <>Wayne Kirchner wanted a moving test of memory, not a still shelf of remembered items. His N-back makes you keep the present, discard the stale, and preserve one fragile thread of <em>just-before</em>.</>, C: () => <window.NBack /> },
+        { id: "digit-span", title: "Digit Span", cite: "Jacobs, 1887", who: "Joseph Jacobs", measures: "short-term memory · span", desc: "Watch digits flash, then type them back as the line grows longer.", history: <>Joseph Jacobs studied memory with rows of digits and the patience of a Victorian psychophysicist. The result feels humble, almost schoolroom-simple, until the seventh digit arrives and the mind's little table is full.</>, C: () => <window.DigitSpan /> },
+        { id: "corsi", title: "Corsi Block-Tapping", cite: "Corsi, 1972", who: "Philip Michael Corsi", measures: "visuospatial span", desc: "Blocks light up in space; click the route back from memory.", history: <>Philip Corsi built a memory task out of wooden blocks, turning space itself into a sequence. Instead of reciting numbers, participants had to remember a path, as if attention had left footprints on a tabletop.</>, C: () => <window.Corsi /> },
+        { id: "sternberg", title: "Memory Scan", cite: "Sternberg, 1966", who: "Saul Sternberg", measures: "serial memory search · RT slope", desc: "Hold a tiny set in mind, then decide whether the probe belongs.", history: <>Saul Sternberg found drama in the slope of a line. By adding one more item to memory and watching response time rise, he made the hidden search of a remembered list visible in milliseconds.</>, C: () => <window.Sternberg /> },
+        { id: "paired-associates", title: "Paired Associates", cite: "Calkins, 1894", who: "Mary Whiton Calkins", measures: "associative learning · recall", desc: "Learn odd word pairs, then supply the missing partner.", history: <>Mary Whiton Calkins invented paired-associate learning while running Wellesley's psychology lab. Harvard let her complete the work but refused her degree because she was a woman; she kept going anyway and became the first female president of the APA.</>, C: () => <window.PairedAssociates /> }
+      ]},
+      { name: "Executive Control", tasks: [
+        { id: "gonogo", title: "Go/No-Go", cite: "Donders lineage, 1868", who: "Franciscus Donders", measures: "inhibition · commission errors", desc: "Respond to friendly letters; freeze when X appears.", history: <>Franciscus Donders asked how long a thought takes, then gave psychology permission to time the invisible. Go/No-Go descendants keep his chronometric spirit but add a little trap: sometimes the best action is restraint.</>, C: () => <window.GoNoGo /> },
+        { id: "stop-signal", title: "Stop Signal", cite: "Logan & Cowan, 1984", who: "Gordon Logan", measures: "stopping latency · SSRT", desc: "Start a response, then cancel it when the signal suddenly changes.", history: <>Gordon Logan imagined action and inhibition as racers on a track: go wins unless stop catches it in time. The stop-signal task feels like a laboratory version of snatching your hand back from a hot pan.</>, C: () => <window.StopSignal /> },
+        { id: "hanoi", title: "Tower of Hanoi", cite: "Édouard Lucas, 1883", who: "Édouard Lucas", measures: "planning · rule maintenance", desc: "Move three discs across pegs without ever placing a large disc on a small one.", history: <>Édouard Lucas wrapped a mathematical puzzle in a temple legend and gave planning researchers a durable toy. Three discs are enough to expose impatience; seven perfect moves are the quiet little staircase out.</>, C: () => <window.Hanoi /> },
+        { id: "trail-making", title: "Trail Making A & B", cite: "Reitan, 1958", who: "Ralph Reitan", measures: "set shifting · visual scanning", desc: "Connect scattered nodes in order, then alternate numbers and letters.", history: <>Ralph Reitan brought battlefield-era neuropsychology into careful civilian testing. Trail Making looks like a child's dot puzzle until the alternating sequence turns it into a brisk test of mental gear changes.</>, C: () => <window.TrailMaking /> },
+        { id: "task-switching", title: "Task Switching", cite: "Jersild, 1927", who: "Arthur Jersild", measures: "switch cost · cognitive flexibility", desc: "The cue changes the rule: answer colour now, shape next.", history: <>Arthur Jersild asked people to alternate mental operations and found a tax on switching. The task captures a familiar snag: the old rule keeps a hand on the door even after the new one walks in.</>, C: () => <window.TaskSwitch /> },
+        { id: "wcst", title: "Wisconsin Card Sort", cite: "Berg, 1948", who: "Esta Berg", measures: "rule discovery · perseveration", desc: "Sort cards by a hidden rule that quietly changes after you learn it.", history: <>Esta Berg's card sorting test is a polite trick: it rewards discovery, then changes the world without announcing it. The interesting moment is not being wrong, but continuing to be wrong in the same way.</>, C: () => <window.WCST /> }
+      ]},
+      { name: "Perception", tasks: [
+        { id: "rotation", title: "Mental Rotation", cite: "Shepard & Metzler, 1971", who: "Roger Shepard", measures: "spatial imagery · rotation slope", desc: "Decide whether two blocky forms match across rotation.", history: <>Roger Shepard and Jacqueline Metzler made people rotate objects in the mind's hand. Their jagged shapes suggested that imagery was not merely decorative; it could take measurable time to turn.</>, C: () => <window.MentalRotation /> },
+        { id: "muller-lyyer", title: "Müller-Lyer", cite: "Müller-Lyer, 1889", who: "Franz Carl Müller-Lyer", measures: "size illusion · perceptual bias", desc: "Match two lines while arrowheads tug length out of proportion.", history: <>Franz Carl Müller-Lyer drew a deceptively small pair of arrowed lines and found a durable fracture between seeing and measuring. The illusion is a reminder that perception is an argument, not a ruler.</>, C: () => <window.MullerLyer /> },
+        { id: "ebbinghaus", title: "Ebbinghaus", cite: "Ebbinghaus, 1902", who: "Hermann Ebbinghaus", measures: "contextual size illusion", desc: "Adjust a circle while its neighbors distort your sense of size.", history: <>Hermann Ebbinghaus is famous for forgetting curves, but his circles also made context visible. A centre dot seems to swell or shrink depending on its companions, which is a social pressure of another kind.</>, C: () => <window.Ebbinghaus /> },
+        { id: "change-blindness", title: "Change Blindness", cite: "Rensink et al., 1997", who: "Ronald Rensink", measures: "visual awareness · change detection", desc: "Watch a flickering scene and click what has changed.", history: <>Ronald Rensink helped show that seeing a scene is not the same as keeping a perfect copy of it. With a blank flash between images, even obvious changes can hide in plain sight.</>, C: () => <window.ChangeBlindness /> },
+        { id: "necker", title: "Necker Cube", cite: "Necker, 1832", who: "Louis Albert Necker", measures: "bistable perception · reversals", desc: "Click whenever the cube flips its orientation in your mind.", history: <>Louis Albert Necker noticed the ambiguous cube while studying crystals in Switzerland. A few ink lines became a small machine for watching perception change its mind without the world changing at all.</>, C: () => <window.Necker /> },
+        { id: "mot", title: "Multiple Object Tracking", cite: "Pylyshyn & Storm, 1988", who: "Zenon Pylyshyn", measures: "divided attention · object tracking", desc: "Remember the highlighted dots as all of them start moving.", history: <>Zenon Pylyshyn treated attention like an indexing system for objects, not a smear of brightness. Multiple object tracking makes that idea physical: several dots wander, and your mind tries to keep tags tied to them.</>, C: () => <window.MOT /> }
+      ]},
+      { name: "Reaction Time & Vigilance", tasks: [
+        { id: "simple-rt", title: "Simple RT", cite: "Donders, 1868", who: "Franciscus Donders", measures: "motor latency · alerting", desc: "Wait for the field to turn pastel blue, then click as fast as you can.", history: <>Donders used reaction time as a lantern for mental operations. The simple version is almost austere: nothing to choose, only the interval between the world's signal and your hand.</>, C: () => <window.SimpleRT /> },
+        { id: "subitizing", title: "Subitizing", cite: "Kaufman et al., 1949", who: "Lloyd Kaufman", measures: "numerosity · counting slope", desc: "Dots flash briefly; report how many you saw.", history: <>Kaufman and colleagues gave a name to the little miracle of instantly knowing there are three things. Above four, the miracle thins out and counting starts leaving tracks in response time.</>, C: () => <window.Subitizing /> },
+        { id: "pvt", title: "PVT", cite: "Dinges & Powell, 1985", who: "David Dinges", measures: "vigilance · lapses", desc: "Stay ready through unpredictable waits and catch the running counter.", history: <>David Dinges studied sleep loss with a task deliberately short on entertainment. The Psychomotor Vigilance Test is a small patience chamber where fatigue announces itself as delayed clicks and missed moments.</>, C: () => <window.PVT /> },
+        { id: "tapping", title: "Tapping Regularity", cite: "Wing & Kristofferson, 1973", who: "Alan Wing", measures: "timing variability · ITI SD", desc: "Tap the spacebar at a steady rhythm of your own choosing.", history: <>Alan Wing and A. B. Kristofferson treated tapping as a window into internal clocks and motor noise. A finger on a key becomes a seismograph for rhythm.</>, C: () => <window.Tapping /> },
+        { id: "subjective-time", title: "Subjective Time", cite: "Vierordt, 1868", who: "Karl von Vierordt", measures: "duration production · bias", desc: "Produce a target interval without counting out loud.", history: <>Karl von Vierordt measured time as people felt it rather than as clocks kept it. His work left a peculiar truth: short durations stretch, long ones compress, and the present is an elastic room.</>, C: () => <window.SubjectiveTime /> },
+        { id: "beat-tap", title: "Beat Synchronization", cite: "Repp, 2005", who: "Bruno Repp", measures: "sensorimotor synchrony", desc: "Tap with a metronome and watch your timing settle or wander.", history: <>Bruno Repp studied the tiny errors that happen when people tap with sound. Those errors are not just mistakes; they reveal how the nervous system predicts the next beat before it arrives.</>, C: () => <window.BeatTap /> }
+      ]},
+      { name: "Decision & Bias", tasks: [
+        { id: "anchoring", title: "Anchoring", cite: "Tversky & Kahneman, 1974", who: "Amos Tversky", measures: "anchoring bias · adjustment", desc: "A random number nudges your estimate before you can pretend it didn't.", history: <>Amos Tversky and Daniel Kahneman loved simple questions with unsettling answers. Anchoring showed that even arbitrary numbers can leave fingerprints on estimates, like chalk dust on a sleeve.</>, C: () => <window.Anchoring /> },
+        { id: "framing", title: "Framing", cite: "Tversky & Kahneman, 1981", who: "Daniel Kahneman", measures: "risk preference · framing", desc: "Choose a public-health plan under gain or loss wording.", history: <>Kahneman and Tversky made one dilemma wear two coats: lives saved or lives lost. The arithmetic stayed still, but preferences moved, exposing how wording can tilt the room.</>, C: () => <window.Framing /> },
+        { id: "delay", title: "Delay Discounting", cite: "Mazur, 1987", who: "James Mazur", measures: "temporal discounting · k", desc: "Choose smaller money now or larger money later.", history: <>James Mazur gave impatience a curve. Delay discounting turns everyday tradeoffs into a series of quiet bargains with your future self.</>, C: () => <window.DelayDiscounting /> },
+        { id: "iowa", title: "Iowa Gambling", cite: "Bechara et al., 1994", who: "Antoine Bechara", measures: "reward learning · risk", desc: "Pick from four decks and learn which generous-looking ones are costly.", history: <>Antoine Bechara and colleagues built a card game where bad decks smile early and punish later. It became a compact drama of reward, emotion, and learning from consequences.</>, C: () => <window.IowaGambling /> },
+        { id: "linda", title: "Linda Problem", cite: "Tversky & Kahneman, 1983", who: "Amos Tversky", measures: "conjunction fallacy", desc: "Meet Linda, then choose the more probable statement.", history: <>Linda is fictional, but she has probably embarrassed more confident reasoners than many real people. Tversky and Kahneman used her vivid biography to show how representativeness can overpower probability.</>, C: () => <window.LindaProblem /> },
+        { id: "crt", title: "Cognitive Reflection Test", cite: "Frederick, 2005", who: "Shane Frederick", measures: "reflection · intuitive traps", desc: "Three small riddles where the first answer is often the trap.", history: <>Shane Frederick's CRT has the air of a bar puzzle and the bite of a measuring tool. Its questions invite a fast answer, then reward the person who pauses long enough to mistrust fluency.</>, C: () => <window.CRT /> }
+      ]},
+      { name: "Language & Learning", tasks: [
+        { id: "lexical", title: "Lexical Decision", cite: "Meyer & Schvaneveldt, 1971", who: "David Meyer", measures: "semantic priming · word recognition", desc: "Decide word or non-word after a prime nudges meaning.", history: <>David Meyer and Roger Schvaneveldt found that related words prepare one another like neighbours opening doors. DOCTOR can make NURSE arrive faster, which is semantic memory quietly warming up.</>, C: () => <window.LexicalDecision /> },
+        { id: "mere-exposure", title: "Mere Exposure", cite: "Zajonc, 1968", who: "Robert Zajonc", measures: "familiarity · preference", desc: "See strange shapes at different frequencies, then rate what you like.", history: <>Robert Zajonc argued that liking can grow before reasons do. Mere exposure is the soft psychology of familiarity: a shape returns often enough and begins to feel like it belongs.</>, C: () => <window.MereExposure /> }
+      ]},
+      { name: "Social & Emotion", tasks: [
+        { id: "asch", title: "Asch Lines", cite: "Asch, 1951", who: "Solomon Asch", measures: "conformity · social pressure", desc: "Judge line lengths after a room of prior answers points the wrong way.", history: <>Solomon Asch staged a social situation with lines so clear they seemed immune to doubt. Then a unanimous group chose wrongly, and many participants felt the strange heat of standing alone with the obvious.</>, C: () => <window.AschLines /> },
+        { id: "iat", title: "Implicit Association", cite: "Greenwald et al., 1998", who: "Anthony Greenwald", measures: "association strength · D-score", desc: "Sort words and faces while category pairings change.", history: <>Anthony Greenwald, Debbie McGhee, and Jordan Schwartz made a sorting task that listens to speed. The IAT is controversial in interpretation, but historically important as a way to ask how associations move before reflection catches up.</>, C: () => <window.IAT /> },
+        { id: "trolley", title: "Trolley Dilemmas", cite: "Foot, 1967", who: "Philippa Foot", measures: "moral judgment · action type", desc: "Answer four moral dilemmas and compare your pattern.", history: <>Philippa Foot, an Oxford philosopher and granddaughter of U.S. President Grover Cleveland, invented the trolley problem while thinking about double effect. A runaway trolley became philosophy's most durable little machine for moral unease.</>, C: () => <window.Trolley /> },
+        { id: "ultimatum", title: "Ultimatum Game", cite: "Güth et al., 1982", who: "Werner Güth", measures: "fairness · rejection threshold", desc: "Accept or reject splits of ten dollars from a computer partner.", history: <>Werner Güth's bargaining game made fairness costly. People often reject unfair money, a small rebellion against the tidy prediction that any gain should be accepted.</>, C: () => <window.Ultimatum /> },
+        { id: "emotion", title: "Emotion Recognition", cite: "Ekman & Friesen, 1976", who: "Paul Ekman", measures: "facial affect labeling", desc: "Read stylized faces and choose the emotion.", history: <>Paul Ekman carried photographs across cultures and argued that some emotional expressions travel widely. The faces here are only sketches, but they keep the old question alive: what can a face say before words arrive?</>, C: () => <window.EmotionRecog /> },
+        { id: "marshmallow", title: "Marshmallow Test", cite: "Mischel, 1972", who: "Walter Mischel", measures: "delay of gratification", desc: "Take the small reward now, or wait for the larger one.", history: <>Walter Mischel's preschoolers sat with treats and an impossible instruction: wait. Later debate softened the myth around the test, but the original scenes remain vivid little portraits of temptation and strategy.</>, C: () => <window.Marshmallow /> }
+      ]},
+      { name: "Personality", tasks: [
+        { id: "big-five", title: "Big Five (BFI-10)", cite: "Rammstedt & John, 2007", who: "Beatrice Rammstedt", measures: "OCEAN traits · self-report", desc: "Ten statements sketch the five-factor personality model.", history: <>Beatrice Rammstedt and Oliver John compressed a broad personality inventory into ten brisk items. It is not a diagnosis, just a thumbnail portrait in five old dimensions: openness, conscientiousness, extraversion, agreeableness, and neuroticism.</>, C: () => <window.BigFive /> }
+      ]}
+    ];
+
+    const taskCount = CATEGORIES.reduce((sum, cat) => sum + cat.tasks.length, 0);
+    const allTasks = CATEGORIES.flatMap((cat, ci) => cat.tasks.map((task, ti) => ({ ...task, category: cat.name, ci, ti, number: `${roman[ci]}.${ti + 1}` })));
+
+    function Brand({ onClick, home, active }) {
+      return (
+        <button className={home ? `brand home-brand${active ? " active" : ""}` : "brand"} onClick={onClick} aria-label="go home">
+          {home && <span className="home-glyph">⌂</span>}
+          <span className="mark" aria-hidden="true">
+            <svg viewBox="0 0 40 40">
+              <path d="M12 23.5c0-6.4 4.8-11 11-11 4.1 0 7.3 1.9 9.1 4.8" />
+              <path d="M12 23.5c0 5.1 3.8 8.5 8.8 8.5 3.5 0 6.1-1.4 8.1-3.8" />
+              <path d="M17 22h5l2.2-4.4 3.3 9.4 2.1-5h3.4" />
+              <circle cx="12" cy="23.5" r="2.2" />
+              <circle cx="33" cy="22" r="2.2" />
+            </svg>
+          </span>
+          <span className="wordmark"><span className="word-mono">cognitive</span><span className="word-serif">lab</span></span>
+        </button>
+      );
+    }
+
+    function CursorField() {
+      const [points, setPoints] = useState([]);
+      function move(e) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const next = { x: e.clientX - rect.left, y: e.clientY - rect.top, t: Date.now() };
+        setPoints((old) => [next, ...old].slice(0, 12));
+      }
+      return (
+        <div className="cursor-field" onMouseMove={move} onMouseLeave={() => setPoints([])}>
+          <span>move through the field</span>
+          {points.map((p, i) => (
+            <i key={`${p.t}-${i}`} style={{ left: p.x, top: p.y, opacity: 1 - i / 13, transform: `translate(-50%, -50%) scale(${1 - i * 0.045})` }}></i>
+          ))}
+        </div>
+      );
+    }
+
+    function Ticker() {
+      const items = allTasks.map((t) => `● ${t.cite} ${t.title}`);
+      return (
+        <div className="ticker" aria-hidden="true">
+          <div className="ticker-track">
+            {[...items, ...items].map((item, i) => <span key={i}>{item}</span>)}
+          </div>
+        </div>
+      );
+    }
+
+    const THEMES = [
+      { id: "powder", name: "Powder", swatch: "#b6e4fb" },
+      { id: "sky", name: "Sky", swatch: "#a9cfff" },
+      { id: "ice", name: "Ice", swatch: "#dff7ff" },
+      { id: "periwinkle", name: "Periwinkle", swatch: "#c9d8ff" }
+    ];
+
+    function formatDate(iso) {
+      if (!iso) return "not yet";
+      return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    }
+
+    function getPrimaryResult(entry) {
+      return entry?.results?.[0] ? `${entry.results[0].label}: ${entry.results[0].value}` : "saved result";
+    }
+
+    function buildAchievements(history, favorites) {
+      const completed = new Set(history.map((r) => r.taskId));
+      const domains = new Set(history.map((r) => r.category));
+      return [
+        { name: "First Run", detail: "complete one task", earned: history.length >= 1 },
+        { name: "Explorer", detail: "finish 5 tasks", earned: completed.size >= 5 },
+        { name: "Broad Sampler", detail: "try 5 domains", earned: domains.size >= 5 },
+        { name: "Repeat Scientist", detail: "save 10 runs", earned: history.length >= 10 },
+        { name: "Curator", detail: "favorite 3 tasks", earned: favorites.length >= 3 }
+      ];
+    }
+
+    function App() {
+      const [query, setQuery] = useState("");
+      const [activeId, setActiveId] = useState("");
+      const [mobileOpen, setMobileOpen] = useState(false);
+      const [historyRows, setHistoryRows] = window.LabStore.useStoredState(window.LabStore.RESULTS_KEY, []);
+      const [favorites, setFavorites] = window.LabStore.useStoredState(window.LabStore.FAVORITES_KEY, []);
+      const [theme, setTheme] = window.LabStore.useStoredState(window.LabStore.THEME_KEY, "powder");
+      const filtered = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        if (!q) return CATEGORIES;
+        return CATEGORIES.map((cat) => ({
+          ...cat,
+          tasks: cat.tasks.filter((t) => [t.title, t.cite, t.who, t.measures, t.desc, cat.name].join(" ").toLowerCase().includes(q))
+        })).filter((cat) => cat.tasks.length);
+      }, [query]);
+      const activeTask = allTasks.find((t) => t.id === activeId);
+      const completedIds = useMemo(() => new Set(historyRows.map((r) => r.taskId)), [historyRows]);
+      const favoriteSet = useMemo(() => new Set(favorites), [favorites]);
+      const completedPercent = Math.round(completedIds.size / taskCount * 100);
+      const recentRows = historyRows.slice(0, 5);
+      const favoriteTasks = favorites.map((id) => allTasks.find((t) => t.id === id)).filter(Boolean);
+      const achievementRows = buildAchievements(historyRows, favorites);
+      const activeTaskRuns = activeTask ? historyRows.filter((r) => r.taskId === activeTask.id) : [];
+
+      useEffect(() => {
+        document.documentElement.dataset.theme = theme;
+      }, [theme]);
+
+      useEffect(() => {
+        const onHash = () => setActiveId(location.hash.replace("#", ""));
+        onHash();
+        window.addEventListener("hashchange", onHash);
+        return () => window.removeEventListener("hashchange", onHash);
+      }, []);
+
+      function goHome() {
+        setActiveId("");
+        history.replaceState(null, "", location.pathname);
+        setMobileOpen(false);
+      }
+      function chooseTask(id) {
+        location.hash = id;
+        setActiveId(id);
+        setMobileOpen(false);
+      }
+      function toggleFavorite(id, e) {
+        e?.stopPropagation?.();
+        setFavorites((old) => old.includes(id) ? old.filter((x) => x !== id) : [id, ...old]);
+      }
+      function clearHistory() {
+        setHistoryRows([]);
+      }
+
+      return (
+        <>
+          <div className="ambient"><i></i><i></i><i></i></div>
+          <div className={`${activeTask ? "app-shell task-view" : "app-shell home-view"} ${mobileOpen ? "nav-open" : ""}`}>
+            <header className="shell-header">
+              <button className="mobile-menu-btn" onClick={() => setMobileOpen(true)} aria-label="open task menu"><span></span><span></span><span></span></button>
+              <Brand onClick={goHome} />
+              <label className="search-box">
+                <span>⌕</span>
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="search tasks, citations, constructs, names…" />
+              </label>
+              <div className="header-meta"><span>{taskCount} tasks</span><span>{CATEGORIES.length} domains</span></div>
+              <div className="live-pill"><i></i>live</div>
+            </header>
+            <aside className="sidebar">
+              <Brand home active={!activeId} onClick={goHome} />
+              <button className="nav-close" onClick={() => setMobileOpen(false)}>close</button>
+              <nav>
+                {filtered.map((cat) => {
+                  const ci = CATEGORIES.findIndex((c) => c.name === cat.name);
+                  return (
+                    <section key={cat.name}>
+                      <div className="sidebar-section-label">{roman[ci]} · {cat.name}</div>
+                      {cat.tasks.map((task) => {
+                        const ti = CATEGORIES[ci].tasks.findIndex((t) => t.id === task.id);
+                        return (
+                          <button key={task.id} className={activeId === task.id ? "sidebar-link active" : "sidebar-link"} onClick={() => chooseTask(task.id)}>
+                            <span>{roman[ci]}.{ti + 1}</span>{task.title}
+                          </button>
+                        );
+                      })}
+                    </section>
+                  );
+                })}
+              </nav>
+              <footer className="sidebar-foot">not a clinical instrument<br></br>for curiosity only<br></br>v.0.4</footer>
+            </aside>
+            <button className="nav-scrim" aria-label="close task menu" onClick={() => setMobileOpen(false)}></button>
+            <main className="main">
+              <div className="main-inner">
+                {!activeTask ? (
+                  <>
+                    <section className="home-hero">
+                      <div className="hero-copy">
+                        <h1>cognitive <em>lab.</em></h1>
+                        <p className="lede">A playable reference library of classical psychology tasks: a desk of tiny experiments, warm biographies, and citations you can actually touch.</p>
+                        <div className="stats"><span>{taskCount} tasks</span><span>{completedIds.size} completed</span><span>{historyRows.length} saved runs</span></div>
+                      </div>
+                      <div className="visual-board" aria-hidden="true">
+                        <span className="scan-line"></span>
+                        <i className="node-a"></i>
+                        <i className="node-b"></i>
+                        <i className="node-c"></i>
+                        <i className="node-d"></i>
+                        <svg viewBox="0 0 420 250" role="img">
+                          <path d="M48 172 C108 76 158 202 214 114 S322 68 376 154" />
+                          <path d="M70 74 L142 142 L212 92 L284 168 L352 82" />
+                          <circle cx="70" cy="74" r="7" />
+                          <circle cx="142" cy="142" r="7" />
+                          <circle cx="212" cy="92" r="7" />
+                          <circle cx="284" cy="168" r="7" />
+                          <circle cx="352" cy="82" r="7" />
+                        </svg>
+                        <strong>live task field</strong>
+                      </div>
+                    </section>
+                    <section className="lab-dashboard">
+                      <div className="dashboard-card progress-card">
+                        <div className="dashboard-label">progress</div>
+                        <strong>{completedIds.size}/{taskCount}</strong>
+                        <span>{completedPercent}% complete</span>
+                        <div className="progress-line"><i style={{ width: `${completedPercent}%` }}></i></div>
+                      </div>
+                      <div className="dashboard-card recent-card">
+                        <div className="dashboard-row">
+                          <div><div className="dashboard-label">recent runs</div><strong>{historyRows.length}</strong></div>
+                          <button className="mini-action" onClick={clearHistory}>clear</button>
+                        </div>
+                        {recentRows.length ? recentRows.map((row) => (
+                          <button className="recent-run" key={row.id} onClick={() => chooseTask(row.taskId)}>
+                            <span>{formatDate(row.at)}</span>
+                            <b>{row.title}</b>
+                            <small>{getPrimaryResult(row)}</small>
+                          </button>
+                        )) : <p className="empty-note">Run a task and your history will appear here.</p>}
+                      </div>
+                      <div className="dashboard-card badges-card">
+                        <div className="dashboard-label">badges</div>
+                        <div className="badge-list">
+                          {achievementRows.map((badge) => (
+                            <span className={badge.earned ? "badge earned" : "badge"} key={badge.name}>
+                              <b>{badge.name}</b>
+                              <small>{badge.detail}</small>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="dashboard-card theme-card">
+                        <div className="dashboard-label">pastel theme</div>
+                        <div className="theme-switcher">
+                          {THEMES.map((t) => (
+                            <button className={theme === t.id ? "active" : ""} key={t.id} onClick={() => setTheme(t.id)}>
+                              <i style={{ background: t.swatch }}></i>{t.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+                    {favoriteTasks.length ? (
+                      <section className="favorites-strip">
+                        <div className="category-label"><span>fav</span><strong>favorites</strong><i></i><b>{favoriteTasks.length}</b></div>
+                        <div className="favorite-row">
+                          {favoriteTasks.slice(0, 6).map((task) => (
+                            <button key={task.id} onClick={() => chooseTask(task.id)}><span>*</span>{task.title}</button>
+                          ))}
+                        </div>
+                      </section>
+                    ) : null}
+                    <div className="domain-strip">
+                      {CATEGORIES.map((cat, ci) => (
+                        <button key={cat.name} onClick={() => chooseTask(cat.tasks[0].id)}>
+                          <span>{roman[ci]}</span>
+                          <strong>{cat.name}</strong>
+                          <b>{cat.tasks.length}</b>
+                        </button>
+                      ))}
+                    </div>
+                    <CursorField />
+                    <Ticker />
+                    {filtered.length ? filtered.map((cat) => {
+                      const ci = CATEGORIES.findIndex((c) => c.name === cat.name);
+                      return (
+                        <section className="category-block" key={cat.name}>
+                          <div className="category-label"><span>{roman[ci]}</span><strong>{cat.name}</strong><i></i><b>{cat.tasks.length}</b></div>
+                          <div className="card-grid">
+                            {cat.tasks.map((task) => {
+                              const ti = CATEGORIES[ci].tasks.findIndex((t) => t.id === task.id);
+                              return (
+                                <article className={completedIds.has(task.id) ? "game-card completed" : "game-card"} key={task.id} onClick={() => chooseTask(task.id)} role="button" tabIndex="0" onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") chooseTask(task.id); }}>
+                                  <button className={favoriteSet.has(task.id) ? "favorite-btn active" : "favorite-btn"} onClick={(e) => toggleFavorite(task.id, e)} aria-label="toggle favorite">{favoriteSet.has(task.id) ? "*" : "+"}</button>
+                                  <span className="card-index">№ {roman[ci]}.{ti + 1}</span>
+                                  <strong>{task.title}</strong>
+                                  <em>{task.cite}</em>
+                                  <p>{task.desc}</p>
+                                  <small>{completedIds.has(task.id) ? "completed" : "not completed"} · {task.measures}</small>
+                                </article>
+                              );
+                            })}
+                          </div>
+                        </section>
+                      );
+                    }) : <p className="no-match">No tasks match “{query}”.</p>}
+                    <footer className="home-footer">—— end ——<br></br>not a clinical instrument · for curiosity only</footer>
+                  </>
+                ) : (
+                  <>
+                    <div className="task-breadcrumb">the lab / {roman[activeTask.ci]}. {activeTask.category} / {activeTask.title}</div>
+                    <section className="task-headbar">
+                      <h2>{activeTask.title}</h2>
+                      <div className="citebox">
+                        <strong>{activeTask.cite}</strong>
+                        <span>measures · {activeTask.measures}</span>
+                        <button className={favoriteSet.has(activeTask.id) ? "favorite-wide active" : "favorite-wide"} onClick={(e) => toggleFavorite(activeTask.id, e)}>{favoriteSet.has(activeTask.id) ? "favorited" : "add favorite"}</button>
+                      </div>
+                    </section>
+                    <section className="history-block">
+                      <h3><i></i>the story · {activeTask.who}</h3>
+                      <p>{activeTask.history}</p>
+                    </section>
+                    <section className="task-info-panel">
+                      <div><span>about</span><p>{activeTask.desc}</p></div>
+                      <dl>
+                        <div><dt>domain</dt><dd>{activeTask.category}</dd></div>
+                        <div><dt>estimate</dt><dd>{window.TaskHelpers.taskEstimate(activeTask)}</dd></div>
+                        <div><dt>saved runs</dt><dd>{activeTaskRuns.length}</dd></div>
+                        <div><dt>latest</dt><dd>{formatDate(activeTaskRuns[0]?.at)}</dd></div>
+                      </dl>
+                    </section>
+                    <window.TaskContext.Provider value={activeTask}>
+                      <activeTask.C />
+                    </window.TaskContext.Provider>
+                  </>
+                )}
+              </div>
+            </main>
+          </div>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "Cognitive Lab",
+  "short_name": "Cog Lab",
+  "description": "A pastel cognitive task lab with playable psychology tests and saved results.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8fdff",
+  "theme_color": "#dff7ff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
