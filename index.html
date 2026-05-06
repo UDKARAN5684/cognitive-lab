@@ -98,11 +98,49 @@
       return "keyboard / click";
     }
 
+    function dateKey(value = new Date()) {
+      const date = new Date(value);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+
+    function daySeed(key = dateKey()) {
+      return key.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    }
+
+    function buildStreak(history) {
+      const days = new Set(history.map((row) => dateKey(row.at)));
+      let streak = 0;
+      const cursor = new Date();
+      while (days.has(dateKey(cursor))) {
+        streak += 1;
+        cursor.setDate(cursor.getDate() - 1);
+      }
+      return streak;
+    }
+
     function GameShell({ cite, instructions, phase, headline, explain, onBegin, onReset, children, footer, results, doneText, doneExtra }) {
       const task = useContext(TaskContext);
       const savedSignature = useRef("");
+      const [shareState, setShareState] = useState("");
       const taskRuns = task ? readStore(RESULTS_KEY, []).filter((r) => r.taskId === task.id) : [];
       const resultSignature = phase === "done" && results ? JSON.stringify(results.map((r) => [r.label, String(r.value)])) : "";
+
+      async function shareResults() {
+        if (!task || !results?.length) return;
+        const resultText = results.map((r) => `${r.label}: ${r.value}`).join(", ");
+        const text = `Cognitive Lab - ${task.title}: ${resultText}`;
+        try {
+          if (navigator.share) {
+            await navigator.share({ title: `Cognitive Lab - ${task.title}`, text });
+            setShareState("shared");
+          } else {
+            await navigator.clipboard.writeText(text);
+            setShareState("copied");
+          }
+        } catch (err) {
+          setShareState("");
+        }
+      }
 
       useEffect(() => {
         if (phase !== "done") {
@@ -166,6 +204,16 @@
                 </div>
                 <p className="task-explain">{doneText}</p>
                 {doneExtra}
+                {task && results?.length ? (
+                  <div className="share-card">
+                    <div>
+                      <span>share card</span>
+                      <strong>{task.title}</strong>
+                      <small>{results.slice(0, 3).map((r) => `${r.label}: ${r.value}`).join(" / ")}</small>
+                    </div>
+                    <button className="mini-action" onClick={shareResults}>{shareState || "share"}</button>
+                  </div>
+                ) : null}
                 <button className="ghost-btn" onClick={onReset}>run again →</button>
               </div>
             </div>
@@ -288,6 +336,21 @@
 
     const taskCount = CATEGORIES.reduce((sum, cat) => sum + cat.tasks.length, 0);
     const allTasks = CATEGORIES.flatMap((cat, ci) => cat.tasks.map((task, ti) => ({ ...task, category: cat.name, ci, ti, number: `${roman[ci]}.${ti + 1}` })));
+    const CATEGORY_VISUALS = {
+      "Attention": { icon: "AT", accent: "#0ea5e9" },
+      "Memory": { icon: "WM", accent: "#2563eb" },
+      "Executive Control": { icon: "EX", accent: "#0284c7" },
+      "Perception": { icon: "PX", accent: "#38bdf8" },
+      "Reaction Time & Vigilance": { icon: "RT", accent: "#1d4ed8" },
+      "Decision & Bias": { icon: "DB", accent: "#0f91d8" },
+      "Language & Learning": { icon: "LL", accent: "#0369a1" },
+      "Social & Emotion": { icon: "SE", accent: "#3b82f6" },
+      "Personality": { icon: "BF", accent: "#0891b2" }
+    };
+
+    function categoryVisual(name, fallbackIndex = 0) {
+      return CATEGORY_VISUALS[name] || { icon: roman[fallbackIndex] || "CL", accent: "#1d86c5" };
+    }
 
     function Brand({ onClick, home, active }) {
       return (
@@ -311,6 +374,7 @@
       return (
         <div className="logo-splash" aria-label="opening cognitive lab">
           <div className="splash-field" aria-hidden="true">
+            {Array.from({ length: 10 }).map((_, i) => <span className={`splash-particle p${i + 1}`} key={i}></span>)}
             <span className="splash-orbit orbit-one"></span>
             <span className="splash-orbit orbit-two"></span>
             <span className="splash-mark">
@@ -377,11 +441,12 @@
       const completed = new Set(history.map((r) => r.taskId));
       const domains = new Set(history.map((r) => r.category));
       return [
-        { name: "First Run", detail: "complete one task", earned: history.length >= 1 },
-        { name: "Explorer", detail: "finish 5 tasks", earned: completed.size >= 5 },
-        { name: "Broad Sampler", detail: "try 5 domains", earned: domains.size >= 5 },
-        { name: "Repeat Scientist", detail: "save 10 runs", earned: history.length >= 10 },
-        { name: "Curator", detail: "favorite 3 tasks", earned: favorites.length >= 3 }
+        { name: "First Run", detail: "complete one task", icon: "01", earned: history.length >= 1 },
+        { name: "Explorer", detail: "finish 5 tasks", icon: "05", earned: completed.size >= 5 },
+        { name: "Broad Sampler", detail: "try 5 domains", icon: "IX", earned: domains.size >= 5 },
+        { name: "Repeat Scientist", detail: "save 10 runs", icon: "10", earned: history.length >= 10 },
+        { name: "Curator", detail: "favorite 3 tasks", icon: "FV", earned: favorites.length >= 3 },
+        { name: "Daily Return", detail: "build a streak", icon: "ST", earned: buildStreak(history) >= 2 }
       ];
     }
 
@@ -389,6 +454,7 @@
       const [activeId, setActiveId] = useState("");
       const [mobileOpen, setMobileOpen] = useState(false);
       const [showSplash, setShowSplash] = useState(true);
+      const [showStickyStart, setShowStickyStart] = useState(false);
       const [historyRows, setHistoryRows] = window.LabStore.useStoredState(window.LabStore.RESULTS_KEY, []);
       const [favorites, setFavorites] = window.LabStore.useStoredState(window.LabStore.FAVORITES_KEY, []);
       const [theme, setTheme] = window.LabStore.useStoredState(window.LabStore.THEME_KEY, "powder");
@@ -401,10 +467,61 @@
       const favoriteTasks = favorites.map((id) => allTasks.find((t) => t.id === id)).filter(Boolean);
       const achievementRows = buildAchievements(historyRows, favorites);
       const activeTaskRuns = activeTask ? historyRows.filter((r) => r.taskId === activeTask.id) : [];
+      const dailyTask = allTasks[daySeed() % allTasks.length];
+      const recommendedTask = allTasks.find((task) => !completedIds.has(task.id)) || dailyTask;
+      const continueTask = recentRows[0] ? allTasks.find((task) => task.id === recentRows[0].taskId) : null;
+      const streak = buildStreak(historyRows);
+      const quickFavoriteTask = favoriteTasks[0] || recommendedTask;
 
       useEffect(() => {
         document.documentElement.dataset.theme = theme;
       }, [theme]);
+
+      useEffect(() => {
+        document.documentElement.classList.add("motion-ready");
+        function haptic(e) {
+          if (!e.target.closest("button,[role='button']")) return;
+          navigator.vibrate?.(8);
+        }
+        document.addEventListener("pointerup", haptic, { passive: true });
+        return () => {
+          document.documentElement.classList.remove("motion-ready");
+          document.removeEventListener("pointerup", haptic);
+        };
+      }, []);
+
+      useEffect(() => {
+        const main = document.querySelector(".main");
+        main?.scrollTo({ top: 0, behavior: "smooth" });
+      }, [activeId]);
+
+      useEffect(() => {
+        const main = document.querySelector(".main");
+        if (!main) return;
+        function onScroll() {
+          setShowStickyStart(main.scrollTop > 280);
+        }
+        onScroll();
+        main.addEventListener("scroll", onScroll, { passive: true });
+        return () => main.removeEventListener("scroll", onScroll);
+      }, [activeId]);
+
+      useEffect(() => {
+        const items = document.querySelectorAll(".reveal-section, .dashboard-card, .game-card");
+        if (!("IntersectionObserver" in window)) {
+          items.forEach((item) => item.classList.add("is-visible"));
+          return;
+        }
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          });
+        }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+        items.forEach((item) => observer.observe(item));
+        return () => observer.disconnect();
+      }, [activeId, historyRows.length, favorites.length, theme]);
 
       useEffect(() => {
         const timer = window.setTimeout(() => setShowSplash(false), 2600);
@@ -474,19 +591,57 @@
               <div className="main-inner">
                 {!activeTask ? (
                   <>
-                    <section className="home-hero">
+                    <section className="home-hero reveal-section">
                       <div className="hero-copy">
                         <h1>cognitive <em>lab.</em></h1>
                         <p className="lede"><span>Play classical psychology tasks.</span><span>Save runs and explore by domain.</span></p>
                         <div className="stats"><span>{taskCount} tasks</span><span>{completedIds.size} completed</span><span>{historyRows.length} saved runs</span></div>
                       </div>
                     </section>
-                    <section className="lab-dashboard">
+                    <section className="quick-start-grid reveal-section">
+                      <button className="quick-card daily-card" style={{ "--accent": categoryVisual(dailyTask.category).accent }} onClick={() => chooseTask(dailyTask.id)}>
+                        <span>daily challenge</span>
+                        <strong>{dailyTask.title}</strong>
+                        <small>{dateKey()} · {dailyTask.category}</small>
+                      </button>
+                      <button className="quick-card recommended-card" style={{ "--accent": categoryVisual(recommendedTask.category).accent }} onClick={() => chooseTask(recommendedTask.id)}>
+                        <span>recommended first task</span>
+                        <strong>{recommendedTask.title}</strong>
+                        <small>{recommendedTask.measures}</small>
+                      </button>
+                      <button className="quick-card continue-card" style={{ "--accent": categoryVisual((continueTask || recommendedTask).category).accent }} onClick={() => chooseTask((continueTask || recommendedTask).id)}>
+                        <span>continue where you left off</span>
+                        <strong>{continueTask ? continueTask.title : "Start your first run"}</strong>
+                        <small>{continueTask ? getPrimaryResult(recentRows[0]) : recommendedTask.title}</small>
+                      </button>
+                      <button className="quick-card favorite-card" style={{ "--accent": categoryVisual(quickFavoriteTask.category).accent }} onClick={() => chooseTask(quickFavoriteTask.id)}>
+                        <span>favorites</span>
+                        <strong>{favoriteTasks.length ? quickFavoriteTask.title : "Save a favorite"}</strong>
+                        <small>{favoriteTasks.length ? `${favoriteTasks.length} saved tasks` : "tap + on any task card"}</small>
+                      </button>
+                    </section>
+                    {favoriteTasks.length ? (
+                      <section className="favorites-strip reveal-section">
+                        <div className="category-label"><span>fav</span><strong>favorites</strong><i></i><b>{favoriteTasks.length}</b></div>
+                        <div className="favorite-row">
+                          {favoriteTasks.slice(0, 6).map((task) => (
+                            <button key={task.id} onClick={() => chooseTask(task.id)}><span>*</span>{task.title}</button>
+                          ))}
+                        </div>
+                      </section>
+                    ) : null}
+                    <section className="lab-dashboard reveal-section">
                       <div className="dashboard-card progress-card">
                         <div className="dashboard-label">progress</div>
                         <strong>{completedIds.size}/{taskCount}</strong>
                         <span>{completedPercent}% complete</span>
                         <div className="progress-line"><i style={{ width: `${completedPercent}%` }}></i></div>
+                      </div>
+                      <div className="dashboard-card streak-card">
+                        <div className="dashboard-label">streak</div>
+                        <strong>{streak} day{streak === 1 ? "" : "s"}</strong>
+                        <span>{streak ? "keep the daily run alive" : "finish any task today"}</span>
+                        <div className="streak-dots">{Array.from({ length: 7 }).map((_, i) => <i className={i < Math.min(streak, 7) ? "on" : ""} key={i}></i>)}</div>
                       </div>
                       <div className="dashboard-card recent-card">
                         <div className="dashboard-row">
@@ -504,8 +659,9 @@
                       <div className="dashboard-card badges-card">
                         <div className="dashboard-label">badges</div>
                         <div className="badge-list">
-                          {achievementRows.map((badge) => (
-                            <span className={badge.earned ? "badge earned" : "badge"} key={badge.name}>
+                          {achievementRows.map((badge, i) => (
+                            <span className={badge.earned ? "badge earned" : "badge"} key={badge.name} style={{ "--delay": `${i * 70}ms` }}>
+                              <i>{badge.icon}</i>
                               <b>{badge.name}</b>
                               <small>{badge.detail}</small>
                             </span>
@@ -523,20 +679,10 @@
                         </div>
                       </div>
                     </section>
-                    {favoriteTasks.length ? (
-                      <section className="favorites-strip">
-                        <div className="category-label"><span>fav</span><strong>favorites</strong><i></i><b>{favoriteTasks.length}</b></div>
-                        <div className="favorite-row">
-                          {favoriteTasks.slice(0, 6).map((task) => (
-                            <button key={task.id} onClick={() => chooseTask(task.id)}><span>*</span>{task.title}</button>
-                          ))}
-                        </div>
-                      </section>
-                    ) : null}
-                    <div className="domain-strip">
+                    <div className="domain-strip reveal-section">
                       {CATEGORIES.map((cat, ci) => (
-                        <button key={cat.name} onClick={() => chooseTask(cat.tasks[0].id)}>
-                          <span>{roman[ci]}</span>
+                        <button key={cat.name} style={{ "--accent": categoryVisual(cat.name, ci).accent }} onClick={() => chooseTask(cat.tasks[0].id)}>
+                          <span>{categoryVisual(cat.name, ci).icon}</span>
                           <strong>{cat.name}</strong>
                           <b>{cat.tasks.length}</b>
                         </button>
@@ -547,14 +693,15 @@
                     {filtered.map((cat) => {
                       const ci = CATEGORIES.findIndex((c) => c.name === cat.name);
                       return (
-                        <section className="category-block" key={cat.name}>
-                          <div className="category-label"><span>{roman[ci]}</span><strong>{cat.name}</strong><i></i><b>{cat.tasks.length}</b></div>
+                        <section className="category-block reveal-section" key={cat.name} style={{ "--accent": categoryVisual(cat.name, ci).accent }}>
+                          <div className="category-label"><span>{categoryVisual(cat.name, ci).icon}</span><strong>{cat.name}</strong><i></i><b>{cat.tasks.length}</b></div>
                           <div className="card-grid">
                             {cat.tasks.map((task) => {
                               const ti = CATEGORIES[ci].tasks.findIndex((t) => t.id === task.id);
                               return (
-                                <article className={completedIds.has(task.id) ? "game-card completed" : "game-card"} key={task.id} onClick={() => chooseTask(task.id)} role="button" tabIndex="0" onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") chooseTask(task.id); }}>
+                                <article className={completedIds.has(task.id) ? "game-card completed" : "game-card"} key={task.id} style={{ "--accent": categoryVisual(cat.name, ci).accent }} onClick={() => chooseTask(task.id)} role="button" tabIndex="0" onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") chooseTask(task.id); }}>
                                   <button className={favoriteSet.has(task.id) ? "favorite-btn active" : "favorite-btn"} onClick={(e) => toggleFavorite(task.id, e)} aria-label="toggle favorite">{favoriteSet.has(task.id) ? "*" : "+"}</button>
+                                  <span className="card-icon">{categoryVisual(cat.name, ci).icon}</span>
                                   <span className="card-index">№ {roman[ci]}.{ti + 1}</span>
                                   <strong>{task.title}</strong>
                                   <em>{task.cite}</em>
@@ -600,6 +747,12 @@
                 )}
               </div>
             </main>
+            {!activeTask && showStickyStart && (
+              <button className="sticky-start-btn" onClick={() => chooseTask(recommendedTask.id)}>
+                <span>start a task</span>
+                <strong>{recommendedTask.title}</strong>
+              </button>
+            )}
           </div>
         </>
       );
