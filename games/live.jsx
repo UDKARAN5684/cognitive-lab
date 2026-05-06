@@ -30,7 +30,7 @@ function Hanoi() {
 
 function TrailMaking() {
   const [phase, setPhase] = useState("intro"), [mode, setMode] = useState("A"), [idx, setIdx] = useState(0), [start, setStart] = useState(0), [time, setTime] = useState(0), [hits, setHits] = useState([]);
-  const nodes = Array.from({ length: 15 }, (_, i) => ({ label: mode === "A" ? String(i + 1) : (i % 2 ? String((i + 1) / 2) : String.fromCharCode(65 + i / 2)), x: 60 + (i * 97) % 540, y: 45 + (i * 67) % 230 }));
+  const nodes = Array.from({ length: 15 }, (_, i) => ({ label: mode === "A" ? String(i + 1) : (i % 2 ? String.fromCharCode(65 + Math.floor(i / 2)) : String(i / 2 + 1)), x: 60 + (i * 97) % 540, y: 45 + (i * 67) % 230 }));
   function begin() { setMode(mode); setIdx(0); setHits([]); setStart(Date.now()); setTime(0); setPhase("running"); }
   useEffect(() => { if (phase !== "running") return undefined; const t = setInterval(() => setTime(Math.round((Date.now() - start) / 1000)), 250); return () => clearInterval(t); }, [phase, start]);
   function hit(i) { if (i !== idx) return; const h = [...hits, nodes[i]]; setHits(h); if (i === nodes.length - 1) setPhase("done"); else setIdx(i + 1); }

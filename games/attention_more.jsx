@@ -43,7 +43,11 @@ function VisualSearch() {
   function make(n) {
     const setSize = [12, 20, 32][n % 3];
     const targetAt = rand(0, setSize - 1);
-    return Array.from({ length: setSize }, (_, i) => ({ target: i === targetAt, circle: i !== targetAt && Math.random() > 0.5, red: i === targetAt || Math.random() > 0.5 }));
+    return Array.from({ length: setSize }, (_, i) => {
+      if (i === targetAt) return { target: true, circle: false, red: true };
+      const redCircle = Math.random() > 0.5;
+      return { target: false, circle: redCircle, red: redCircle };
+    });
   }
   function next(n = 0) { setTrial(n); setItems(shuffle(make(n))); setStarted(now()); }
   function begin() { setRows([]); setPhase("running"); next(0); }

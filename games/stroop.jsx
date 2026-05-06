@@ -3,10 +3,10 @@ const { GameShell, choice, mean, now, shuffle, useEffect, useState } = window.Ga
 
 function Stroop() {
   const colors = [
-    { word: "RED", key: "r", ink: "#9bd8f4" },
-    { word: "BLUE", key: "b", ink: "#7fbce6" },
-    { word: "GREEN", key: "g", ink: "#a9cfff" },
-    { word: "YELLOW", key: "y", ink: "#c5deff" }
+    { word: "RED", key: "r", ink: "#ef4444" },
+    { word: "BLUE", key: "b", ink: "#2563eb" },
+    { word: "GREEN", key: "g", ink: "#16a34a" },
+    { word: "YELLOW", key: "y", ink: "#ca8a04" }
   ];
   const [phase, setPhase] = useState("intro");
   const [trials, setTrials] = useState([]);

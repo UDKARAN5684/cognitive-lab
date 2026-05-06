@@ -3,6 +3,7 @@ const { GameShell, choice, mean, rand, now, useEffect, useState } = window.GameK
 
 function TaskSwitch() {
   const colors = ["red", "blue"], shapes = ["●", "■"];
+  const colorInk = { red: "#ef4444", blue: "#2563eb" };
   const [phase, setPhase] = useState("intro"), [trial, setTrial] = useState(0), [cue, setCue] = useState("color"), [stim, setStim] = useState(null), [started, setStarted] = useState(0), [rows, setRows] = useState([]);
   function next(n = 0, prev = cue) { const c = Math.random() < 0.5 ? prev : (prev === "color" ? "shape" : "color"); setTrial(n); setCue(c); setStim({ color: choice(colors), shape: choice(shapes), prev }); setStarted(now()); }
   function begin() { setRows([]); setPhase("running"); next(0, "shape"); }
@@ -20,7 +21,7 @@ function TaskSwitch() {
   const sw = rows.filter((r) => r.sw && r.ok).map((r) => r.rt), rep = rows.filter((r) => !r.sw && r.ok).map((r) => r.rt);
   return (
     <GameShell cite="Jersild, 1927" instructions={<><span className="kbd">R/B</span> colour <span className="kbd">C/S</span> circle/square</>} phase={phase} headline="change the rule" explain="The cue tells you whether colour or shape matters on this trial." onBegin={begin} onReset={begin} footer={`trial ${Math.min(trial + 1, 24)}/24 · cue ${cue}`} results={[{ label: "repeat", value: `${mean(rep)} ms` }, { label: "switch", value: `${mean(sw)} ms` }, { label: "switch cost", value: `${Math.max(0, mean(sw) - mean(rep))} ms` }]} doneText="Switch cost is the small delay from disengaging one rule and loading another.">
-      <div className="center-stack"><span className="pill">{cue}</span><div className="mono-big" style={{ color: stim?.color === "red" ? "#9bd8f4" : "#7fbce6" }}>{stim?.shape}</div></div>
+      <div className="center-stack"><span className="pill">{cue}</span><div className="mono-big" style={{ color: colorInk[stim?.color] || "#2563eb" }}>{stim?.shape}</div></div>
     </GameShell>
   );
 }

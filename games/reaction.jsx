@@ -18,11 +18,16 @@ function Subitizing() {
 }
 
 function PVT() {
-  const [phase, setPhase] = useState("intro"), [trial, setTrial] = useState(0), [live, setLive] = useState(false), [start, setStart] = useState(0), [rows, setRows] = useState([]);
-  function arm(t = 0) { setTrial(t); setLive(false); setTimeout(() => { setLive(true); setStart(performance.now()); }, rand(1200, 5000)); }
-  function begin() { setRows([]); setPhase("running"); arm(0); }
+  const [phase, setPhase] = useState("intro"), [trial, setTrial] = useState(0), [live, setLive] = useState(false), [start, setStart] = useState(0), [clock, setClock] = useState(0), [rows, setRows] = useState([]);
+  function arm(t = 0) { setTrial(t); setLive(false); setClock(0); setTimeout(() => { setLive(true); const started = performance.now(); setStart(started); setClock(0); }, rand(1200, 5000)); }
+  function begin() { setRows([]); setClock(0); setPhase("running"); arm(0); }
+  useEffect(() => {
+    if (phase !== "running" || !live) return undefined;
+    const timer = setInterval(() => setClock(performance.now() - start), 50);
+    return () => clearInterval(timer);
+  }, [phase, live, start]);
   function click() { if (!live) return; const next = [...rows, performance.now() - start]; if (trial >= 11) { setRows(next); setPhase("done"); } else { setRows(next); arm(trial + 1); } }
-  return <GameShell cite="Dinges & Powell, 1985" instructions="click when the counter appears; demo is shortened" phase={phase} headline="stay ready" explain="The waits are uneven. Vigilance is the work of remaining prepared." onBegin={begin} onReset={begin} footer={`trial ${trial + 1}/12`} results={[{ label: "mean RT", value: `${mean(rows)} ms` }, { label: "lapses >500", value: rows.filter((r) => r > 500).length }, { label: "variability", value: `${sd(rows)} ms` }]} doneText="PVT lapses are not wrong choices, just attention arriving late."><div className="center-stack" onClick={click}><div className="mono-big">{live ? Math.round(performance.now() - start) : "..."}</div></div></GameShell>;
+  return <GameShell cite="Dinges & Powell, 1985" instructions="click when the counter appears; demo is shortened" phase={phase} headline="stay ready" explain="The waits are uneven. Vigilance is the work of remaining prepared." onBegin={begin} onReset={begin} footer={`trial ${trial + 1}/12`} results={[{ label: "mean RT", value: `${mean(rows)} ms` }, { label: "lapses >500", value: rows.filter((r) => r > 500).length }, { label: "variability", value: `${sd(rows)} ms` }]} doneText="PVT lapses are not wrong choices, just attention arriving late."><div className="center-stack" onClick={click}><div className="mono-big">{live ? Math.round(clock) : "..."}</div></div></GameShell>;
 }
 
 function Tapping() {

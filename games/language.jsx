@@ -24,7 +24,13 @@ function MereExposure() {
   const freq = [1, 5, 10, 25];
   const [phase, setPhase] = useState("intro"), [study, setStudy] = useState([]), [i, setI] = useState(0), [ratings, setRatings] = useState([]);
   function begin() { const s = shuffle(shapes.flatMap((p, idx) => Array.from({ length: freq[idx] }, () => idx))); setStudy(s); setI(0); setRatings([]); setPhase("running"); }
-  function rate(v) { const next = [...ratings, { shape: i, rating: v }]; if (i >= shapes.length - 1) { setRatings(next); setPhase("done"); } else { setRatings(next); setI(i + 1); } }
+  function rate(v) {
+    const testIdx = i - study.length;
+    const next = [...ratings, { shape: testIdx, rating: v }];
+    setRatings(next);
+    if (testIdx >= shapes.length - 1) setPhase("done");
+    else setI(i + 1);
+  }
   useEffect(() => { if (phase !== "running" || i >= study.length) return undefined; const t = setTimeout(() => setI(i + 1), 120); return () => clearTimeout(t); }, [phase, i, study]);
   const testing = phase === "running" && i >= study.length; const testIdx = i - study.length;
   const vals = freq.map((f, idx) => ratings.find((r) => r.shape === idx)?.rating || 0);

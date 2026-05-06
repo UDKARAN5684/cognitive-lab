@@ -1133,10 +1133,13 @@ em { color: #93d9ff; font-style: italic; }
   background: #eaf6ff;
 }
 .shape.circle { border-radius: 50%; }
-.shape.green { border-color: #0369a1; }
+.shape.green {
+  border-color: #15803d;
+  background: rgba(34, 197, 94, 0.18);
+}
 .shape.red {
-  border-color: #0284c7;
-  background: rgba(56, 189, 248, 0.16);
+  border-color: #dc2626;
+  background: rgba(239, 68, 68, 0.18);
 }
 .memory-block {
   width: 64px;
@@ -1714,10 +1717,13 @@ textarea,
   background: #315a78;
 }
 .shape { background: #f8fdff; border-color: #315a78; }
-.shape.green { border-color: #7fbce6; }
+.shape.green {
+  border-color: #15803d;
+  background: rgba(34, 197, 94, 0.18);
+}
 .shape.red {
-  border-color: #8ed7f6;
-  background: rgba(182, 228, 251, 0.36);
+  border-color: #dc2626;
+  background: rgba(239, 68, 68, 0.18);
 }
 .peg { border-bottom-color: #315a78; }
 .peg::before { background: rgba(116, 177, 219, 0.32); }
@@ -2332,10 +2338,13 @@ textarea,
     linear-gradient(0deg, rgba(55, 136, 196, 0.14) 1px, transparent 1px);
 }
 .shape { border-color: #0d2b44; }
-.shape.green { border-color: #2698d3; }
+.shape.green {
+  border-color: #15803d;
+  background: rgba(34, 197, 94, 0.18);
+}
 .shape.red {
-  border-color: #32b9f2;
-  background: rgba(79, 195, 247, 0.26);
+  border-color: #dc2626;
+  background: rgba(239, 68, 68, 0.18);
 }
 .peg { border-bottom-color: #0d2b44; }
 .disc { border-color: #0d2b44; }
