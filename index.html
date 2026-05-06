@@ -591,14 +591,15 @@
               <div className="main-inner">
                 {!activeTask ? (
                   <>
-                    <section className="home-hero reveal-section">
+                    <section className="home-command-deck reveal-section">
+                      <div className="home-hero">
                       <div className="hero-copy">
                         <h1>cognitive <em>lab.</em></h1>
                         <p className="lede"><span>Play classical psychology tasks.</span><span>Save runs and explore by domain.</span></p>
                         <div className="stats"><span>{taskCount} tasks</span><span>{completedIds.size} completed</span><span>{historyRows.length} saved runs</span></div>
                       </div>
-                    </section>
-                    <section className="quick-start-grid reveal-section">
+                      </div>
+                      <div className="quick-start-grid">
                       <button className="quick-card daily-card" style={{ "--accent": categoryVisual(dailyTask.category).accent }} onClick={() => chooseTask(dailyTask.id)}>
                         <span>daily challenge</span>
                         <strong>{dailyTask.title}</strong>
@@ -619,6 +620,7 @@
                         <strong>{favoriteTasks.length ? quickFavoriteTask.title : "Save a favorite"}</strong>
                         <small>{favoriteTasks.length ? `${favoriteTasks.length} saved tasks` : "tap + on any task card"}</small>
                       </button>
+                      </div>
                     </section>
                     {favoriteTasks.length ? (
                       <section className="favorites-strip reveal-section">
@@ -630,6 +632,15 @@
                         </div>
                       </section>
                     ) : null}
+                    <div className="domain-strip reveal-section">
+                      {CATEGORIES.map((cat, ci) => (
+                        <button key={cat.name} style={{ "--accent": categoryVisual(cat.name, ci).accent }} onClick={() => chooseTask(cat.tasks[0].id)}>
+                          <span>{categoryVisual(cat.name, ci).icon}</span>
+                          <strong>{cat.name}</strong>
+                          <b>{cat.tasks.length}</b>
+                        </button>
+                      ))}
+                    </div>
                     <section className="lab-dashboard reveal-section">
                       <div className="dashboard-card progress-card">
                         <div className="dashboard-label">progress</div>
@@ -679,17 +690,6 @@
                         </div>
                       </div>
                     </section>
-                    <div className="domain-strip reveal-section">
-                      {CATEGORIES.map((cat, ci) => (
-                        <button key={cat.name} style={{ "--accent": categoryVisual(cat.name, ci).accent }} onClick={() => chooseTask(cat.tasks[0].id)}>
-                          <span>{categoryVisual(cat.name, ci).icon}</span>
-                          <strong>{cat.name}</strong>
-                          <b>{cat.tasks.length}</b>
-                        </button>
-                      ))}
-                    </div>
-                    <CursorField />
-                    <Ticker />
                     {filtered.map((cat) => {
                       const ci = CATEGORIES.findIndex((c) => c.name === cat.name);
                       return (
@@ -714,6 +714,10 @@
                         </section>
                       );
                     })}
+                    <section className="lab-atmosphere reveal-section">
+                      <CursorField />
+                      <Ticker />
+                    </section>
                     <footer className="home-footer">not a clinical instrument · for curiosity only</footer>
                   </>
                 ) : (
