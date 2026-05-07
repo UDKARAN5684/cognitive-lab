@@ -40,7 +40,14 @@ function Stroop() {
   return (
     <GameShell
       cite="Stroop, 1935"
-      instructions={<><span className="kbd">R</span><span className="kbd">B</span><span className="kbd">G</span><span className="kbd">Y</span> name the ink colour, not the word</>}
+      instructions={
+        <ol>
+          <li>A word appears printed in a coloured ink.</li>
+          <li>Name the <strong>ink colour</strong> — ignore what the word says.</li>
+          <li>Press <span className="kbd">R</span> Red · <span className="kbd">B</span> Blue · <span className="kbd">G</span> Green · <span className="kbd">Y</span> Yellow.</li>
+          <li>Work fast and accurately — 24 trials total.</li>
+        </ol>
+      }
       phase={phase}
       headline="name the ink"
       explain="A fluent word arrives faster than you asked for. Let the ink win."

@@ -32,7 +32,14 @@ function PosnerCueing() {
   const valid = rows.filter((r) => r.valid).map((r) => r.rt);
   const invalid = rows.filter((r) => !r.valid).map((r) => r.rt);
   return (
-    <GameShell cite="Posner, 1980" instructions={<><span className="kbd">Space</span> press when the dot appears</>} phase={phase} headline="covert spotlight" explain="Let the arrow tug attention left or right, then respond to the target dot." onBegin={begin} onReset={begin} footer={`trial ${Math.min(trial + 1, 20)}/20 · cue ${cue}`} results={[{ label: "valid", value: `${mean(valid)} ms` }, { label: "invalid", value: `${mean(invalid)} ms` }, { label: "cue cost", value: `${Math.max(0, mean(invalid) - mean(valid))} ms` }]} doneText="Valid cues usually help; invalid cues charge a small reorienting toll.">
+    <GameShell cite="Posner, 1980" instructions={
+        <ol>
+          <li>An arrow appears in the centre — let it pull your attention left or right.</li>
+          <li>A dot then appears in one of the two boxes.</li>
+          <li>Press <span className="kbd">Space</span> as soon as you see the dot.</li>
+          <li>80% of arrows point to the dot's box; 20% are misleading — 20 trials total.</li>
+        </ol>
+      } phase={phase} headline="covert spotlight" explain="Let the arrow tug attention left or right, then respond to the target dot." onBegin={begin} onReset={begin} footer={`trial ${Math.min(trial + 1, 20)}/20 · cue ${cue}`} results={[{ label: "valid", value: `${mean(valid)} ms` }, { label: "invalid", value: `${mean(invalid)} ms` }, { label: "cue cost", value: `${Math.max(0, mean(invalid) - mean(valid))} ms` }]} doneText="Valid cues usually help; invalid cues charge a small reorienting toll.">
       <div className="center-stack">
         <div className="choice-row" style={{ width: "520px", alignItems: "center" }}>
           <div className="sort-card">{showTarget && target === "left" ? "●" : ""}</div>

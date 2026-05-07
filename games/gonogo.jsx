@@ -31,7 +31,14 @@ function GoNoGo() {
   }, [phase, i, letters, rows, started]);
   const hits = rows.filter((r) => r.kind === "hit");
   return (
-    <GameShell cite="Donders lineage, 1868" instructions={<><span className="kbd">Space</span> press for every letter except X</>} phase={phase} headline="go, until no-go" explain="Most letters ask for a response. X asks for a tiny act of stopping." onBegin={begin} onReset={begin} footer={`trial ${Math.min(i + 1, letters.length || 30)}/30`} results={[{ label: "mean go RT", value: `${mean(hits.map((r) => r.rt))} ms` }, { label: "commissions", value: rows.filter((r) => r.kind === "commission").length }, { label: "misses", value: rows.filter((r) => r.kind === "miss").length }]} doneText="Commission errors are responses made when restraint was the whole task.">
+    <GameShell cite="Donders lineage, 1868" instructions={
+        <ol>
+          <li>Letters appear one at a time on screen.</li>
+          <li>Press <span className="kbd">Space</span> for every letter <strong>except X</strong>.</li>
+          <li>When X appears, do nothing — hold your response.</li>
+          <li>Speed and restraint both count — 30 trials total.</li>
+        </ol>
+      } phase={phase} headline="go, until no-go" explain="Most letters ask for a response. X asks for a tiny act of stopping." onBegin={begin} onReset={begin} footer={`trial ${Math.min(i + 1, letters.length || 30)}/30`} results={[{ label: "mean go RT", value: `${mean(hits.map((r) => r.rt))} ms` }, { label: "commissions", value: rows.filter((r) => r.kind === "commission").length }, { label: "misses", value: rows.filter((r) => r.kind === "miss").length }]} doneText="Commission errors are responses made when restraint was the whole task.">
       <div className="mono-big">{letters[i]}</div>
     </GameShell>
   );

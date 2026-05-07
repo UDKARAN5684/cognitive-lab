@@ -2,19 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Cognitive Lab</title>
-  <meta name="theme-color" content="#dff7ff">
+  <meta name="theme-color" content="#2563EB">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Cognitive Lab">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="Play 50+ classical psychology tasks. Explore attention, memory, decision-making, and more.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="app-icon.svg">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='14' fill='%23f8fdff'/%3E%3Cpath d='M14 28c0-7.3 5.5-12.6 12.5-12.6 4.7 0 8.3 2.2 10.3 5.5M14 28c0 5.8 4.3 9.6 10 9.6 4 0 6.9-1.6 9.2-4.3M19.5 26.2h5.5l2.5-5 3.7 10.6 2.4-5.6h4' fill='none' stroke='%234b9dd0' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='14' cy='28' r='2.7' fill='%238ed7f6'/%3E%3Ccircle cx='38' cy='26.2' r='2.7' fill='%238ed7f6'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='14' fill='%23EFF6FF'/%3E%3Cpath d='M14 28c0-7.3 5.5-12.6 12.5-12.6 4.7 0 8.3 2.2 10.3 5.5M14 28c0 5.8 4.3 9.6 10 9.6 4 0 6.9-1.6 9.2-4.3M19.5 26.2h5.5l2.5-5 3.7 10.6 2.4-5.6h4' fill='none' stroke='%232563EB' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='14' cy='28' r='2.7' fill='%2360A5FA'/%3E%3Ccircle cx='38' cy='26.2' r='2.7' fill='%2360A5FA'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
-  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -46,16 +47,12 @@
       try {
         const raw = localStorage.getItem(key);
         return raw ? JSON.parse(raw) : fallback;
-      } catch (err) {
-        return fallback;
-      }
+      } catch { return fallback; }
     }
-
     function writeStore(key, value) {
       localStorage.setItem(key, JSON.stringify(value));
       window.dispatchEvent(new CustomEvent("lab-store", { detail: { key, value } }));
     }
-
     function useStoredState(key, fallback) {
       const [value, setValue] = useState(() => readStore(key, fallback));
       useEffect(() => {
@@ -66,58 +63,53 @@
         }
         window.addEventListener("storage", sync);
         window.addEventListener("lab-store", sync);
-        return () => {
-          window.removeEventListener("storage", sync);
-          window.removeEventListener("lab-store", sync);
-        };
+        return () => { window.removeEventListener("storage", sync); window.removeEventListener("lab-store", sync); };
       }, [key]);
       function save(next) {
         setValue((old) => {
-          const valueToSave = typeof next === "function" ? next(old) : next;
-          writeStore(key, valueToSave);
-          return valueToSave;
+          const v = typeof next === "function" ? next(old) : next;
+          writeStore(key, v);
+          return v;
         });
       }
       return [value, save];
     }
 
     function taskEstimate(task) {
-      if (!task) return "1-2 min";
+      if (!task) return "1–2 min";
       if (task.category === "Personality") return "3 min";
-      if (task.category === "Memory") return "2-4 min";
-      if (task.category === "Reaction Time & Vigilance") return "1-3 min";
-      return "1-2 min";
+      if (task.category === "Memory") return "2–4 min";
+      if (task.category === "Reaction Time & Vigilance") return "1–3 min";
+      return "1–2 min";
     }
-
     function inputMode(instructions) {
-      if (typeof instructions === "string") {
-        const text = instructions.toLowerCase();
-        if (text.includes("click")) return "click";
-        if (text.includes("type")) return "typing";
-      }
-      return "touch buttons / keyboard";
+      if (!instructions) return "keyboard / touch";
+      const extractText = (node) => {
+        if (!node) return "";
+        if (typeof node === "string") return node;
+        if (Array.isArray(node)) return node.map(extractText).join(" ");
+        if (node?.props?.children) return extractText(node.props.children);
+        return "";
+      };
+      const text = extractText(instructions).toLowerCase();
+      if (text.includes("type")) return "typing";
+      if (text.includes("click") || text.includes("tap")) return "tap / click";
+      return "keyboard / touch";
     }
-
     function dateKey(value = new Date()) {
-      const date = new Date(value);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      const d = new Date(value);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
     }
-
     function daySeed(key = dateKey()) {
-      return key.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+      return key.split("").reduce((s, c) => s + c.charCodeAt(0), 0);
     }
-
     function buildStreak(history) {
-      const days = new Set(history.map((row) => dateKey(row.at)));
+      const days = new Set(history.map((r) => dateKey(r.at)));
       let streak = 0;
       const cursor = new Date();
-      while (days.has(dateKey(cursor))) {
-        streak += 1;
-        cursor.setDate(cursor.getDate() - 1);
-      }
+      while (days.has(dateKey(cursor))) { streak++; cursor.setDate(cursor.getDate() - 1); }
       return streak;
     }
-
     function nodeText(node) {
       if (node == null || node === false) return "";
       if (typeof node === "string" || typeof node === "number") return String(node);
@@ -125,85 +117,54 @@
       if (React.isValidElement(node)) return nodeText(node.props.children);
       return "";
     }
-
     function keyboardLabels(node) {
       const labels = [];
       function walk(value) {
         if (value == null || value === false) return;
-        if (Array.isArray(value)) {
-          value.forEach(walk);
-          return;
-        }
+        if (Array.isArray(value)) { value.forEach(walk); return; }
         if (!React.isValidElement(value)) return;
-        const className = String(value.props.className || "");
-        if (className.split(/\s+/).includes("kbd")) {
-          labels.push(nodeText(value.props.children));
-          return;
-        }
+        const cls = String(value.props.className || "");
+        if (cls.split(/\s+/).includes("kbd")) { labels.push(nodeText(value.props.children)); return; }
         walk(value.props.children);
       }
       walk(node);
       return labels;
     }
-
     function virtualKey(rawLabel) {
       const compact = String(rawLabel || "").replace(/\s+/g, "");
       const lower = compact.toLowerCase();
       if (!compact) return null;
-      if (lower.includes("space")) return { label: "tap", key: " ", code: "Space" };
-      if (compact.includes("\u2190") || compact.includes("\u00e2\u2020\u0090")) return { label: "left", key: "ArrowLeft", code: "ArrowLeft" };
-      if (compact.includes("\u2192") || compact.includes("\u00e2\u2020\u2019")) return { label: "right", key: "ArrowRight", code: "ArrowRight" };
+      if (lower.includes("space")) return { label: "TAP", key: " ", code: "Space" };
+      if (compact.includes("←") || compact.includes("←")) return { label: "←", key: "ArrowLeft", code: "ArrowLeft" };
+      if (compact.includes("→") || compact.includes("→")) return { label: "→", key: "ArrowRight", code: "ArrowRight" };
       if (/^[a-z]$/i.test(compact)) return { label: compact.toUpperCase(), key: compact.toLowerCase(), code: `Key${compact.toUpperCase()}` };
       if (/^\d$/.test(compact)) return { label: compact, key: compact, code: `Digit${compact}` };
       return null;
     }
-
     function virtualKeys(instructions) {
       const controls = keyboardLabels(instructions)
-        .flatMap((label) => String(label).split("/"))
-        .map(virtualKey)
-        .filter(Boolean);
+        .flatMap((l) => String(l).split("/"))
+        .map(virtualKey).filter(Boolean);
       const seen = new Set();
-      return controls.filter((control) => {
-        const id = `${control.key}:${control.code}`;
-        if (seen.has(id)) return false;
-        seen.add(id);
-        return true;
-      });
+      return controls.filter((c) => { const id = `${c.key}:${c.code}`; if (seen.has(id)) return false; seen.add(id); return true; });
     }
-
     function pressVirtualKey(control) {
-      window.dispatchEvent(new KeyboardEvent("keydown", {
-        key: control.key,
-        code: control.code,
-        bubbles: true,
-        cancelable: true
-      }));
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: control.key, code: control.code, bubbles: true, cancelable: true }));
     }
 
     function TouchControls({ controls }) {
       if (!controls.length) return null;
       return (
-        <div className="touch-controls" aria-label="phone controls">
-          <span>phone controls</span>
+        <div className="touch-controls" aria-label="on-screen controls">
+          <span>touch controls</span>
           <div>
-            {controls.map((control) => (
+            {controls.map((c) => (
               <button
                 type="button"
-                key={`${control.key}-${control.code}`}
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  pressVirtualKey(control);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    pressVirtualKey(control);
-                  }
-                }}
-              >
-                {control.label}
-              </button>
+                key={`${c.key}-${c.code}`}
+                onPointerDown={(e) => { e.preventDefault(); pressVirtualKey(c); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pressVirtualKey(c); } }}
+              >{c.label}</button>
             ))}
           </div>
         </div>
@@ -221,49 +182,36 @@
       async function shareResults() {
         if (!task || !results?.length) return;
         const resultText = results.map((r) => `${r.label}: ${r.value}`).join(", ");
-        const text = `Cognitive Lab - ${task.title}: ${resultText}`;
+        const text = `Cognitive Lab — ${task.title}: ${resultText}`;
         try {
-          if (navigator.share) {
-            await navigator.share({ title: `Cognitive Lab - ${task.title}`, text });
-            setShareState("shared");
-          } else {
-            await navigator.clipboard.writeText(text);
-            setShareState("copied");
-          }
-        } catch (err) {
-          setShareState("");
-        }
+          if (navigator.share) { await navigator.share({ title: `Cognitive Lab — ${task.title}`, text }); setShareState("shared!"); }
+          else { await navigator.clipboard.writeText(text); setShareState("copied!"); }
+        } catch { setShareState(""); }
+        setTimeout(() => setShareState(""), 2000);
       }
 
       useEffect(() => {
-        if (phase !== "done") {
-          savedSignature.current = "";
-          return;
-        }
+        if (phase !== "done") { savedSignature.current = ""; return; }
         if (!task || !results?.length || !resultSignature || savedSignature.current === resultSignature) return;
         savedSignature.current = resultSignature;
         const history = readStore(RESULTS_KEY, []);
-        const entry = {
-          id: `${task.id}-${Date.now()}`,
-          taskId: task.id,
-          title: task.title,
-          category: task.category,
-          cite,
-          at: new Date().toISOString(),
-          results: results.map((r) => ({ label: r.label, value: String(r.value) }))
-        };
+        const entry = { id: `${task.id}-${Date.now()}`, taskId: task.id, title: task.title, category: task.category, cite, at: new Date().toISOString(), results: results.map((r) => ({ label: r.label, value: String(r.value) })) };
         writeStore(RESULTS_KEY, [entry, ...history].slice(0, 120));
       }, [phase, task?.id, resultSignature]);
 
       if (phase === "intro") {
         return (
           <section className="game-shell">
-            <div className="game-instructions">{instructions}</div>
             <div className="task-stage">
               <div className="task-card">
                 <div className="task-meta">{cite}</div>
                 <h3 className="task-headline">{headline}</h3>
                 <p className="task-explain">{explain}</p>
+                {instructions && (
+                  <div className="game-instructions" style={{ borderRadius: "10px", borderBottom: "1px solid", marginBottom: "18px" }}>
+                    {instructions}
+                  </div>
+                )}
                 {task && (
                   <div className="task-intro-meta">
                     <span><b>time</b>{taskEstimate(task)}</span>
@@ -272,21 +220,23 @@
                     <span><b>domain</b>{task.category}</span>
                   </div>
                 )}
-                <button className="primary-btn" onClick={onBegin}>begin task →</button>
+                <button className="primary-btn" onClick={onBegin} style={{ width: "100%", marginTop: "8px", padding: "16px 24px", fontSize: "16px" }}>
+                  Start Task →
+                </button>
               </div>
             </div>
-            <div className="game-footer">{footer || "waiting at the bench"}</div>
+            <div className="game-footer">{footer || "ready to begin"}</div>
           </section>
         );
       }
+
       if (phase === "done") {
         return (
           <section className="game-shell">
-            <div className="game-instructions">{instructions}</div>
             <div className="task-stage">
               <div className="task-card task-results">
                 <div className="task-meta">{cite}</div>
-                <h3 className="task-headline">results</h3>
+                <h3 className="task-headline">your results</h3>
                 <div className="result-grid">
                   {results.map((r) => (
                     <div className="result-tile" key={r.label}>
@@ -300,20 +250,23 @@
                 {task && results?.length ? (
                   <div className="share-card">
                     <div>
-                      <span>share card</span>
+                      <span>share result</span>
                       <strong>{task.title}</strong>
-                      <small>{results.slice(0, 3).map((r) => `${r.label}: ${r.value}`).join(" / ")}</small>
+                      <small>{results.slice(0, 2).map((r) => `${r.label}: ${r.value}`).join(" · ")}</small>
                     </div>
                     <button className="mini-action" onClick={shareResults}>{shareState || "share"}</button>
                   </div>
                 ) : null}
-                <button className="ghost-btn" onClick={onReset}>run again →</button>
+                <button className="ghost-btn" onClick={onReset} style={{ width: "100%", marginTop: "8px" }}>
+                  Run again →
+                </button>
               </div>
             </div>
             <div className="game-footer">{footer || "not a clinical instrument · for curiosity only"}</div>
           </section>
         );
       }
+
       return (
         <section className="game-shell">
           <div className="game-instructions">{instructions}</div>
@@ -367,6 +320,7 @@
 
   <script type="text/babel">
     const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
+
     const CATEGORIES = [
       { name: "Attention", tasks: [
         { id: "stroop", title: "Stroop Test", cite: "Stroop, 1935", who: "John Ridley Stroop", measures: "selective attention · interference", desc: "Name the ink while the word tries to drag your tongue elsewhere.", history: <>A graduate student in Nashville, John Ridley Stroop noticed something strange: when colour words wore the wrong ink, fluent readers suddenly stumbled. He published the work in 1935, then left psychology for a quieter life teaching Bible studies, while his little <em>word-colour trap</em> became immortal.</>, C: () => <window.Stroop /> },
@@ -379,7 +333,8 @@
         { id: "digit-span", title: "Digit Span", cite: "Jacobs, 1887", who: "Joseph Jacobs", measures: "short-term memory · span", desc: "Watch digits flash, then type them back as the line grows longer.", history: <>Joseph Jacobs studied memory with rows of digits and the patience of a Victorian psychophysicist. The result feels humble, almost schoolroom-simple, until the seventh digit arrives and the mind's little table is full.</>, C: () => <window.DigitSpan /> },
         { id: "corsi", title: "Corsi Block-Tapping", cite: "Corsi, 1972", who: "Philip Michael Corsi", measures: "visuospatial span", desc: "Blocks light up in space; click the route back from memory.", history: <>Philip Corsi built a memory task out of wooden blocks, turning space itself into a sequence. Instead of reciting numbers, participants had to remember a path, as if attention had left footprints on a tabletop.</>, C: () => <window.Corsi /> },
         { id: "sternberg", title: "Memory Scan", cite: "Sternberg, 1966", who: "Saul Sternberg", measures: "serial memory search · RT slope", desc: "Hold a tiny set in mind, then decide whether the probe belongs.", history: <>Saul Sternberg found drama in the slope of a line. By adding one more item to memory and watching response time rise, he made the hidden search of a remembered list visible in milliseconds.</>, C: () => <window.Sternberg /> },
-        { id: "paired-associates", title: "Paired Associates", cite: "Calkins, 1894", who: "Mary Whiton Calkins", measures: "associative learning · recall", desc: "Learn odd word pairs, then supply the missing partner.", history: <>Mary Whiton Calkins invented paired-associate learning while running Wellesley's psychology lab. Harvard let her complete the work but refused her degree because she was a woman; she kept going anyway and became the first female president of the APA.</>, C: () => <window.PairedAssociates /> }
+        { id: "paired-associates", title: "Paired Associates", cite: "Calkins, 1894", who: "Mary Whiton Calkins", measures: "associative learning · recall", desc: "Learn odd word pairs, then supply the missing partner.", history: <>Mary Whiton Calkins invented paired-associate learning while running Wellesley's psychology lab. Harvard let her complete the work but refused her degree because she was a woman; she kept going anyway and became the first female president of the APA.</>, C: () => <window.PairedAssociates /> },
+        { id: "simon", title: "Simon Memory", cite: "Sequential span · 1978", who: "Hasbro / Memory span research", measures: "sequence memory · recall span", desc: "Watch a growing pattern of coloured pads light up, then repeat it exactly.", history: <>The electronic Simon game (1978) put sequence memory in everyone's hands. Though named after J.R. Simon's spatial-compatibility research, the game itself measures what Jacobs measured with digits in 1887: the capacity to hold and reproduce an ordered series. How long a chain can you keep?</>, C: () => <window.Simon /> }
       ]},
       { name: "Executive Control", tasks: [
         { id: "gonogo", title: "Go/No-Go", cite: "Donders lineage, 1868", who: "Franciscus Donders", measures: "inhibition · commission errors", desc: "Respond to friendly letters; freeze when X appears.", history: <>Franciscus Donders asked how long a thought takes, then gave psychology permission to time the invisible. Go/No-Go descendants keep his chronometric spirit but add a little trap: sometimes the best action is restraint.</>, C: () => <window.GoNoGo /> },
@@ -395,15 +350,16 @@
         { id: "ebbinghaus", title: "Ebbinghaus", cite: "Ebbinghaus, 1902", who: "Hermann Ebbinghaus", measures: "contextual size illusion", desc: "Adjust a circle while its neighbors distort your sense of size.", history: <>Hermann Ebbinghaus is famous for forgetting curves, but his circles also made context visible. A centre dot seems to swell or shrink depending on its companions, which is a social pressure of another kind.</>, C: () => <window.Ebbinghaus /> },
         { id: "change-blindness", title: "Change Blindness", cite: "Rensink et al., 1997", who: "Ronald Rensink", measures: "visual awareness · change detection", desc: "Watch a flickering scene and click what has changed.", history: <>Ronald Rensink helped show that seeing a scene is not the same as keeping a perfect copy of it. With a blank flash between images, even obvious changes can hide in plain sight.</>, C: () => <window.ChangeBlindness /> },
         { id: "necker", title: "Necker Cube", cite: "Necker, 1832", who: "Louis Albert Necker", measures: "bistable perception · reversals", desc: "Click whenever the cube flips its orientation in your mind.", history: <>Louis Albert Necker noticed the ambiguous cube while studying crystals in Switzerland. A few ink lines became a small machine for watching perception change its mind without the world changing at all.</>, C: () => <window.Necker /> },
-        { id: "mot", title: "Multiple Object Tracking", cite: "Pylyshyn & Storm, 1988", who: "Zenon Pylyshyn", measures: "divided attention · object tracking", desc: "Remember the highlighted dots as all of them start moving.", history: <>Zenon Pylyshyn treated attention like an indexing system for objects, not a smear of brightness. Multiple object tracking makes that idea physical: several dots wander, and your mind tries to keep tags tied to them.</>, C: () => <window.MOT /> }
+        { id: "mot", title: "Multiple Object Tracking", cite: "Pylyshyn & Storm, 1988", who: "Zenon Pylyshyn", measures: "divided attention · object tracking", desc: "Remember the highlighted dots as all of them start moving.", history: <>Zenon Pylyshyn treated attention like an indexing system for objects, not a smear of brightness. Multiple object tracking makes that idea physical: several dots wander, and your mind tries to keep tags tied to them.</>, C: () => <window.MOT /> },
+        { id: "landmark", title: "Landmark Task", cite: "Harvey et al., 1995", who: "Harvey, Milner & Roberts", measures: "spatial bisection · pseudoneglect", desc: "Judge whether a bisecting mark sits left or right of a line's true centre.", history: <>Harvey and colleagues formalized Milner's landmark paradigm to probe spatial attention without a drawing response. The task revealed that healthy right-handers systematically misjudge bisection — favouring the left — a phenomenon called <em>pseudoneglect</em>.</>, C: () => <window.Landmark /> }
       ]},
       { name: "Reaction Time & Vigilance", tasks: [
-        { id: "simple-rt", title: "Simple RT", cite: "Donders, 1868", who: "Franciscus Donders", measures: "motor latency · alerting", desc: "Wait for the field to turn pastel blue, then click as fast as you can.", history: <>Donders used reaction time as a lantern for mental operations. The simple version is almost austere: nothing to choose, only the interval between the world's signal and your hand.</>, C: () => <window.SimpleRT /> },
+        { id: "simple-rt", title: "Simple RT", cite: "Donders, 1868", who: "Franciscus Donders", measures: "motor latency · alerting", desc: "Wait for the field to change, then respond as fast as you can.", history: <>Donders used reaction time as a lantern for mental operations. The simple version is almost austere: nothing to choose, only the interval between the world's signal and your hand.</>, C: () => <window.SimpleRT /> },
         { id: "subitizing", title: "Subitizing", cite: "Kaufman et al., 1949", who: "Lloyd Kaufman", measures: "numerosity · counting slope", desc: "Dots flash briefly; report how many you saw.", history: <>Kaufman and colleagues gave a name to the little miracle of instantly knowing there are three things. Above four, the miracle thins out and counting starts leaving tracks in response time.</>, C: () => <window.Subitizing /> },
         { id: "pvt", title: "PVT", cite: "Dinges & Powell, 1985", who: "David Dinges", measures: "vigilance · lapses", desc: "Stay ready through unpredictable waits and catch the running counter.", history: <>David Dinges studied sleep loss with a task deliberately short on entertainment. The Psychomotor Vigilance Test is a small patience chamber where fatigue announces itself as delayed clicks and missed moments.</>, C: () => <window.PVT /> },
         { id: "tapping", title: "Tapping Regularity", cite: "Wing & Kristofferson, 1973", who: "Alan Wing", measures: "timing variability · ITI SD", desc: "Tap the spacebar at a steady rhythm of your own choosing.", history: <>Alan Wing and A. B. Kristofferson treated tapping as a window into internal clocks and motor noise. A finger on a key becomes a seismograph for rhythm.</>, C: () => <window.Tapping /> },
         { id: "subjective-time", title: "Subjective Time", cite: "Vierordt, 1868", who: "Karl von Vierordt", measures: "duration production · bias", desc: "Produce a target interval without counting out loud.", history: <>Karl von Vierordt measured time as people felt it rather than as clocks kept it. His work left a peculiar truth: short durations stretch, long ones compress, and the present is an elastic room.</>, C: () => <window.SubjectiveTime /> },
-        { id: "beat-tap", title: "Beat Synchronization", cite: "Repp, 2005", who: "Bruno Repp", measures: "sensorimotor synchrony", desc: "Tap with a metronome and watch your timing settle or wander.", history: <>Bruno Repp studied the tiny errors that happen when people tap with sound. Those errors are not just mistakes; they reveal how the nervous system predicts the next beat before it arrives.</>, C: () => <window.BeatTap /> }
+        { id: "beat-tap", title: "Beat Synchronisation", cite: "Repp, 2005", who: "Bruno Repp", measures: "sensorimotor synchrony", desc: "Tap with a metronome and watch your timing settle or wander.", history: <>Bruno Repp studied the tiny errors that happen when people tap with sound. Those errors are not just mistakes; they reveal how the nervous system predicts the next beat before it arrives.</>, C: () => <window.BeatTap /> }
       ]},
       { name: "Decision & Bias", tasks: [
         { id: "anchoring", title: "Anchoring", cite: "Tversky & Kahneman, 1974", who: "Amos Tversky", measures: "anchoring bias · adjustment", desc: "A random number nudges your estimate before you can pretend it didn't.", history: <>Amos Tversky and Daniel Kahneman loved simple questions with unsettling answers. Anchoring showed that even arbitrary numbers can leave fingerprints on estimates, like chalk dust on a sleeve.</>, C: () => <window.Anchoring /> },
@@ -430,22 +386,49 @@
       ]}
     ];
 
-    const taskCount = CATEGORIES.reduce((sum, cat) => sum + cat.tasks.length, 0);
+    const taskCount = CATEGORIES.reduce((s, c) => s + c.tasks.length, 0);
     const allTasks = CATEGORIES.flatMap((cat, ci) => cat.tasks.map((task, ti) => ({ ...task, category: cat.name, ci, ti, number: `${roman[ci]}.${ti + 1}` })));
-    const CATEGORY_VISUALS = {
-      "Attention": { icon: "AT", accent: "#0ea5e9" },
-      "Memory": { icon: "WM", accent: "#2563eb" },
-      "Executive Control": { icon: "EX", accent: "#0284c7" },
-      "Perception": { icon: "PX", accent: "#38bdf8" },
-      "Reaction Time & Vigilance": { icon: "RT", accent: "#1d4ed8" },
-      "Decision & Bias": { icon: "DB", accent: "#0f91d8" },
-      "Language & Learning": { icon: "LL", accent: "#0369a1" },
-      "Social & Emotion": { icon: "SE", accent: "#3b82f6" },
-      "Personality": { icon: "BF", accent: "#0891b2" }
-    };
 
-    function categoryVisual(name, fallbackIndex = 0) {
-      return CATEGORY_VISUALS[name] || { icon: roman[fallbackIndex] || "CL", accent: "#1d86c5" };
+    const CATEGORY_VISUALS = {
+      "Attention":               { icon: "AT", accent: "#0284C7" },
+      "Memory":                  { icon: "WM", accent: "#2563EB" },
+      "Executive Control":       { icon: "EX", accent: "#4F46E5" },
+      "Perception":              { icon: "PX", accent: "#0891B2" },
+      "Reaction Time & Vigilance": { icon: "RT", accent: "#DC2626" },
+      "Decision & Bias":         { icon: "DB", accent: "#D97706" },
+      "Language & Learning":     { icon: "LL", accent: "#059669" },
+      "Social & Emotion":        { icon: "SE", accent: "#DB2777" },
+      "Personality":             { icon: "BF", accent: "#7C3AED" }
+    };
+    function categoryVisual(name, fi = 0) {
+      return CATEGORY_VISUALS[name] || { icon: roman[fi] || "CL", accent: "#2563EB" };
+    }
+
+    const THEMES = [
+      { id: "powder", name: "Default",     swatch: "#2563EB" },
+      { id: "sky",    name: "Sky Blue",    swatch: "#0284C7" },
+      { id: "ice",    name: "Cyan",        swatch: "#0891B2" },
+      { id: "periwinkle", name: "Indigo",  swatch: "#4F46E5" }
+    ];
+
+    function formatDate(iso) {
+      if (!iso) return "—";
+      return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    }
+    function getPrimaryResult(entry) {
+      return entry?.results?.[0] ? `${entry.results[0].label}: ${entry.results[0].value}` : "saved";
+    }
+    function buildAchievements(history, favorites) {
+      const completed = new Set(history.map((r) => r.taskId));
+      const domains = new Set(history.map((r) => r.category));
+      return [
+        { name: "First Run",       detail: "complete one task",  icon: "01", earned: history.length >= 1 },
+        { name: "Explorer",        detail: "finish 5 tasks",     icon: "05", earned: completed.size >= 5 },
+        { name: "Broad Sampler",   detail: "try 5 domains",      icon: "IX", earned: domains.size >= 5 },
+        { name: "Repeat Scientist",detail: "save 10 runs",       icon: "10", earned: history.length >= 10 },
+        { name: "Curator",         detail: "favourite 3 tasks",  icon: "FV", earned: favorites.length >= 3 },
+        { name: "Daily Return",    detail: "2-day streak",       icon: "ST", earned: buildStreak(history) >= 2 }
+      ];
     }
 
     function Brand({ onClick, home, active }) {
@@ -461,16 +444,18 @@
               <circle cx="33" cy="22" r="2.2" />
             </svg>
           </span>
-          <span className="wordmark"><span className="word-mono">cognitive</span><span className="word-serif">lab</span></span>
+          <span className="wordmark">
+            <span className="word-mono">cognitive</span>
+            <span className="word-serif">lab</span>
+          </span>
         </button>
       );
     }
 
     function LogoSplash() {
       return (
-        <div className="logo-splash" aria-label="opening cognitive lab">
+        <div className="logo-splash" aria-label="opening cognitive lab" aria-live="polite">
           <div className="splash-field" aria-hidden="true">
-            {Array.from({ length: 10 }).map((_, i) => <span className={`splash-particle p${i + 1}`} key={i}></span>)}
             <span className="splash-orbit orbit-one"></span>
             <span className="splash-orbit orbit-two"></span>
             <span className="splash-mark">
@@ -494,20 +479,20 @@
       function move(e) {
         const rect = e.currentTarget.getBoundingClientRect();
         const next = { x: e.clientX - rect.left, y: e.clientY - rect.top, t: Date.now() };
-        setPoints((old) => [next, ...old].slice(0, 12));
+        setPoints((old) => [next, ...old].slice(0, 10));
       }
       return (
         <div className="cursor-field" onMouseMove={move} onMouseLeave={() => setPoints([])}>
           <span>move through the field</span>
           {points.map((p, i) => (
-            <i key={`${p.t}-${i}`} style={{ left: p.x, top: p.y, opacity: 1 - i / 13, transform: `translate(-50%, -50%) scale(${1 - i * 0.045})` }}></i>
+            <i key={`${p.t}-${i}`} style={{ left: p.x, top: p.y, opacity: 1 - i / 11, transform: `translate(-50%, -50%) scale(${1 - i * 0.06})` }}></i>
           ))}
         </div>
       );
     }
 
     function Ticker() {
-      const items = allTasks.map((t) => `● ${t.cite} ${t.title}`);
+      const items = allTasks.map((t) => `● ${t.cite}  ${t.title}`);
       return (
         <div className="ticker" aria-hidden="true">
           <div className="ticker-track">
@@ -517,33 +502,25 @@
       );
     }
 
-    const THEMES = [
-      { id: "powder", name: "Powder", swatch: "#b6e4fb" },
-      { id: "sky", name: "Sky", swatch: "#a9cfff" },
-      { id: "ice", name: "Ice", swatch: "#dff7ff" },
-      { id: "periwinkle", name: "Periwinkle", swatch: "#c9d8ff" }
-    ];
-
-    function formatDate(iso) {
-      if (!iso) return "not yet";
-      return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    }
-
-    function getPrimaryResult(entry) {
-      return entry?.results?.[0] ? `${entry.results[0].label}: ${entry.results[0].value}` : "saved result";
-    }
-
-    function buildAchievements(history, favorites) {
-      const completed = new Set(history.map((r) => r.taskId));
-      const domains = new Set(history.map((r) => r.category));
-      return [
-        { name: "First Run", detail: "complete one task", icon: "01", earned: history.length >= 1 },
-        { name: "Explorer", detail: "finish 5 tasks", icon: "05", earned: completed.size >= 5 },
-        { name: "Broad Sampler", detail: "try 5 domains", icon: "IX", earned: domains.size >= 5 },
-        { name: "Repeat Scientist", detail: "save 10 runs", icon: "10", earned: history.length >= 10 },
-        { name: "Curator", detail: "favorite 3 tasks", icon: "FV", earned: favorites.length >= 3 },
-        { name: "Daily Return", detail: "build a streak", icon: "ST", earned: buildStreak(history) >= 2 }
-      ];
+    function BottomNav({ activeView, goHome, openTasks }) {
+      return (
+        <nav className="bottom-nav" aria-label="main navigation">
+          <div className="bottom-nav-inner">
+            <button className={`bnav-btn${activeView === "home" ? " active" : ""}`} onClick={goHome} aria-label="Home">
+              <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span>Home</span>
+            </button>
+            <button className={`bnav-btn${activeView === "tasks" ? " active" : ""}`} onClick={openTasks} aria-label="Tasks">
+              <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              <span>Tasks</span>
+            </button>
+            <button className={`bnav-btn${activeView === "task" ? " active" : ""}`} aria-label="Playing">
+              <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Playing</span>
+            </button>
+          </div>
+        </nav>
+      );
     }
 
     function App() {
@@ -554,7 +531,7 @@
       const [historyRows, setHistoryRows] = window.LabStore.useStoredState(window.LabStore.RESULTS_KEY, []);
       const [favorites, setFavorites] = window.LabStore.useStoredState(window.LabStore.FAVORITES_KEY, []);
       const [theme, setTheme] = window.LabStore.useStoredState(window.LabStore.THEME_KEY, "powder");
-      const filtered = CATEGORIES;
+
       const activeTask = allTasks.find((t) => t.id === activeId);
       const completedIds = useMemo(() => new Set(historyRows.map((r) => r.taskId)), [historyRows]);
       const favoriteSet = useMemo(() => new Set(favorites), [favorites]);
@@ -564,75 +541,46 @@
       const achievementRows = buildAchievements(historyRows, favorites);
       const activeTaskRuns = activeTask ? historyRows.filter((r) => r.taskId === activeTask.id) : [];
       const dailyTask = allTasks[daySeed() % allTasks.length];
-      const recommendedTask = allTasks.find((task) => !completedIds.has(task.id)) || dailyTask;
-      const continueTask = recentRows[0] ? allTasks.find((task) => task.id === recentRows[0].taskId) : null;
+      const recommendedTask = allTasks.find((t) => !completedIds.has(t.id)) || dailyTask;
+      const continueTask = recentRows[0] ? allTasks.find((t) => t.id === recentRows[0].taskId) : null;
       const streak = buildStreak(historyRows);
       const quickFavoriteTask = favoriteTasks[0] || recommendedTask;
 
-      useEffect(() => {
-        document.documentElement.dataset.theme = theme;
-      }, [theme]);
-
+      useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
       useEffect(() => {
         document.documentElement.classList.add("motion-ready");
         function haptic(e) {
           if (!e.target.closest("button,[role='button']")) return;
-          navigator.vibrate?.(8);
+          navigator.vibrate?.(6);
         }
         document.addEventListener("pointerup", haptic, { passive: true });
-        return () => {
-          document.documentElement.classList.remove("motion-ready");
-          document.removeEventListener("pointerup", haptic);
-        };
+        return () => { document.documentElement.classList.remove("motion-ready"); document.removeEventListener("pointerup", haptic); };
       }, []);
-
-      useEffect(() => {
-        const main = document.querySelector(".main");
-        main?.scrollTo({ top: 0, behavior: "smooth" });
-      }, [activeId]);
-
+      useEffect(() => { const m = document.querySelector(".main"); m?.scrollTo({ top: 0, behavior: "smooth" }); }, [activeId]);
       useEffect(() => {
         const main = document.querySelector(".main");
         function onScroll() {
-          const pageScroll = Math.max(
-            main ? main.scrollTop : 0,
-            window.scrollY || 0,
-            document.documentElement.scrollTop || 0,
-            document.body.scrollTop || 0
-          );
-          setShowStickyStart(!activeId && pageScroll > 280);
+          const s = Math.max(main ? main.scrollTop : 0, window.scrollY || 0);
+          setShowStickyStart(!activeId && s > 320);
         }
         onScroll();
         if (main) main.addEventListener("scroll", onScroll, { passive: true });
         window.addEventListener("scroll", onScroll, { passive: true });
-        return () => {
-          if (main) main.removeEventListener("scroll", onScroll);
-          window.removeEventListener("scroll", onScroll);
-        };
+        return () => { if (main) main.removeEventListener("scroll", onScroll); window.removeEventListener("scroll", onScroll); };
       }, [activeId]);
-
       useEffect(() => {
         const items = document.querySelectorAll(".reveal-section, .dashboard-card, .game-card");
-        if (!("IntersectionObserver" in window)) {
-          items.forEach((item) => item.classList.add("is-visible"));
-          return;
-        }
-        const observer = new IntersectionObserver((entries) => {
-          entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-            entry.target.classList.add("is-visible");
-            observer.unobserve(entry.target);
-          });
-        }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
-        items.forEach((item) => observer.observe(item));
-        return () => observer.disconnect();
+        if (!("IntersectionObserver" in window)) { items.forEach((i) => i.classList.add("is-visible")); return; }
+        const obs = new IntersectionObserver((entries) => {
+          entries.forEach((e) => { if (!e.isIntersecting) return; e.target.classList.add("is-visible"); obs.unobserve(e.target); });
+        }, { threshold: 0.1, rootMargin: "0px 0px -32px 0px" });
+        items.forEach((i) => obs.observe(i));
+        return () => obs.disconnect();
       }, [activeId, historyRows.length, favorites.length, theme]);
-
       useEffect(() => {
-        const timer = window.setTimeout(() => setShowSplash(false), 2600);
-        return () => window.clearTimeout(timer);
+        const t = window.setTimeout(() => setShowSplash(false), 2600);
+        return () => window.clearTimeout(t);
       }, []);
-
       useEffect(() => {
         const onHash = () => setActiveId(location.hash.replace("#", ""));
         onHash();
@@ -640,39 +588,34 @@
         return () => window.removeEventListener("hashchange", onHash);
       }, []);
 
-      function goHome() {
-        setActiveId("");
-        window.history.replaceState(null, "", location.pathname);
-        setMobileOpen(false);
-      }
-      function chooseTask(id) {
-        location.hash = id;
-        setActiveId(id);
-        setMobileOpen(false);
-      }
-      function toggleFavorite(id, e) {
-        e?.stopPropagation?.();
-        setFavorites((old) => old.includes(id) ? old.filter((x) => x !== id) : [id, ...old]);
-      }
-      function clearHistory() {
-        setHistoryRows([]);
-      }
+      function goHome() { setActiveId(""); window.history.replaceState(null, "", location.pathname); setMobileOpen(false); }
+      function chooseTask(id) { location.hash = id; setActiveId(id); setMobileOpen(false); }
+      function toggleFavorite(id, e) { e?.stopPropagation?.(); setFavorites((old) => old.includes(id) ? old.filter((x) => x !== id) : [id, ...old]); }
+      function clearHistory() { setHistoryRows([]); }
+
+      const bnav_view = activeTask ? "task" : "home";
 
       return (
         <>
-          <div className="ambient"><i></i><i></i><i></i></div>
+          <div className="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
           {showSplash && <LogoSplash />}
-          <div className={`${activeTask ? "app-shell task-view" : "app-shell home-view"} ${mobileOpen ? "nav-open" : ""}`}>
+          <div className={`app-shell${activeTask ? " task-view" : " home-view"}${mobileOpen ? " nav-open" : ""}`}>
             <header className="shell-header">
-              <button className="mobile-menu-btn" onClick={() => setMobileOpen(true)} aria-label="open task menu"><span></span><span></span><span></span></button>
+              <button className="mobile-menu-btn" onClick={() => setMobileOpen(true)} aria-label="open task menu">
+                <span></span><span></span><span></span>
+              </button>
               <Brand onClick={goHome} />
-              <div className="header-meta"><span>{taskCount} tasks</span><span>{CATEGORIES.length} domains</span></div>
+              <div className="header-meta">
+                <span>{taskCount} tasks</span>
+                <span>{CATEGORIES.length} domains</span>
+              </div>
             </header>
-            <aside className="sidebar">
+
+            <aside className="sidebar" role="navigation" aria-label="task navigation">
               <Brand home active={!activeId} onClick={goHome} />
-              <button className="nav-close" onClick={() => setMobileOpen(false)}>close</button>
+              <button className="nav-close" onClick={() => setMobileOpen(false)}>✕ close</button>
               <nav>
-                {filtered.map((cat) => {
+                {CATEGORIES.map((cat) => {
                   const ci = CATEGORIES.findIndex((c) => c.name === cat.name);
                   return (
                     <section key={cat.name}>
@@ -689,79 +632,98 @@
                   );
                 })}
               </nav>
-              <footer className="sidebar-foot">not a clinical instrument<br></br>for curiosity only<br></br>v.0.4</footer>
+              <footer className="sidebar-foot">Not a clinical instrument · For curiosity only · v0.5</footer>
             </aside>
-            <button className="nav-scrim" aria-label="close task menu" onClick={() => setMobileOpen(false)}></button>
-            <main className="main">
+
+            <button className="nav-scrim" aria-label="close menu" onClick={() => setMobileOpen(false)}></button>
+
+            <main className="main" id="main-content">
               <div className="main-inner">
                 {!activeTask ? (
                   <>
                     <section className="home-command-deck reveal-section">
                       <div className="home-hero">
-                      <div className="hero-copy">
-                        <h1>cognitive <em>lab.</em></h1>
-                        <p className="lede"><span>Play classical psychology tasks.</span><span>Save runs and explore by domain.</span></p>
-                        <div className="stats"><span>{taskCount} tasks</span><span>{completedIds.size} completed</span><span>{historyRows.length} saved runs</span></div>
+                        <div className="hero-copy">
+                          <h1>Cognitive <em>Lab.</em></h1>
+                          <p className="lede">
+                            <span>Play classical psychology tasks.</span>
+                            <span>Save runs and explore by domain.</span>
+                          </p>
+                          <div className="stats">
+                            <span>{taskCount} tasks</span>
+                            <span>{completedIds.size} completed</span>
+                            <span>{historyRows.length} saved runs</span>
+                            <span>{streak > 0 ? `${streak}-day streak` : "start a streak"}</span>
+                          </div>
+                        </div>
                       </div>
-                      </div>
-                      <div className="quick-start-grid">
-                      <button className="quick-card daily-card" style={{ "--accent": categoryVisual(dailyTask.category).accent }} onClick={() => chooseTask(dailyTask.id)}>
-                        <span>daily challenge</span>
-                        <strong>{dailyTask.title}</strong>
-                        <small>{dateKey()} · {dailyTask.category}</small>
-                      </button>
-                      <button className="quick-card recommended-card" style={{ "--accent": categoryVisual(recommendedTask.category).accent }} onClick={() => chooseTask(recommendedTask.id)}>
-                        <span>recommended first task</span>
-                        <strong>{recommendedTask.title}</strong>
-                        <small>{recommendedTask.measures}</small>
-                      </button>
-                      <button className="quick-card continue-card" style={{ "--accent": categoryVisual((continueTask || recommendedTask).category).accent }} onClick={() => chooseTask((continueTask || recommendedTask).id)}>
-                        <span>continue where you left off</span>
-                        <strong>{continueTask ? continueTask.title : "Start your first run"}</strong>
-                        <small>{continueTask ? getPrimaryResult(recentRows[0]) : recommendedTask.title}</small>
-                      </button>
-                      <button className="quick-card favorite-card" style={{ "--accent": categoryVisual(quickFavoriteTask.category).accent }} onClick={() => chooseTask(quickFavoriteTask.id)}>
-                        <span>favorites</span>
-                        <strong>{favoriteTasks.length ? quickFavoriteTask.title : "Save a favorite"}</strong>
-                        <small>{favoriteTasks.length ? `${favoriteTasks.length} saved tasks` : "tap + on any task card"}</small>
-                      </button>
+                      <div className="quick-start-grid" style={{ marginTop: "16px" }}>
+                        <button className="quick-card daily-card" style={{ "--accent": categoryVisual(dailyTask.category).accent }} onClick={() => chooseTask(dailyTask.id)}>
+                          <span>daily challenge</span>
+                          <strong>{dailyTask.title}</strong>
+                          <small>{dateKey()} · {dailyTask.category}</small>
+                        </button>
+                        <button className="quick-card recommended-card" style={{ "--accent": categoryVisual(recommendedTask.category).accent }} onClick={() => chooseTask(recommendedTask.id)}>
+                          <span>recommended</span>
+                          <strong>{recommendedTask.title}</strong>
+                          <small>{recommendedTask.measures}</small>
+                        </button>
+                        <button className="quick-card continue-card" style={{ "--accent": categoryVisual((continueTask || recommendedTask).category).accent }} onClick={() => chooseTask((continueTask || recommendedTask).id)}>
+                          <span>continue</span>
+                          <strong>{continueTask ? continueTask.title : "Start your first run"}</strong>
+                          <small>{continueTask ? getPrimaryResult(recentRows[0]) : recommendedTask.title}</small>
+                        </button>
+                        <button className="quick-card favorite-card" style={{ "--accent": categoryVisual(quickFavoriteTask.category).accent }} onClick={() => chooseTask(quickFavoriteTask.id)}>
+                          <span>favorites</span>
+                          <strong>{favoriteTasks.length ? quickFavoriteTask.title : "Save a favorite"}</strong>
+                          <small>{favoriteTasks.length ? `${favoriteTasks.length} saved` : "tap + on any card"}</small>
+                        </button>
                       </div>
                     </section>
+
                     {favoriteTasks.length ? (
                       <section className="favorites-strip reveal-section">
-                        <div className="category-label"><span>fav</span><strong>favorites</strong><i></i><b>{favoriteTasks.length}</b></div>
+                        <div className="category-label">
+                          <span>★</span><strong>Favorites</strong><i></i><b>{favoriteTasks.length}</b>
+                        </div>
                         <div className="favorite-row">
                           {favoriteTasks.slice(0, 6).map((task) => (
-                            <button key={task.id} onClick={() => chooseTask(task.id)}><span>*</span>{task.title}</button>
+                            <button key={task.id} onClick={() => chooseTask(task.id)}>
+                              <span>★</span>{task.title}
+                            </button>
                           ))}
                         </div>
                       </section>
                     ) : null}
+
                     <div className="domain-strip reveal-section">
                       {CATEGORIES.map((cat, ci) => (
                         <button key={cat.name} style={{ "--accent": categoryVisual(cat.name, ci).accent }} onClick={() => chooseTask(cat.tasks[0].id)}>
                           <span>{categoryVisual(cat.name, ci).icon}</span>
                           <strong>{cat.name}</strong>
-                          <b>{cat.tasks.length}</b>
+                          <b>{cat.tasks.length} tasks</b>
                         </button>
                       ))}
                     </div>
+
                     <section className="lab-dashboard reveal-section">
                       <div className="dashboard-card progress-card">
-                        <div className="dashboard-label">progress</div>
-                        <strong>{completedIds.size}/{taskCount}</strong>
+                        <div className="dashboard-label">Progress</div>
+                        <strong>{completedIds.size}<span style={{ fontSize: "18px", fontWeight: "500", color: "var(--text-4)" }}>/{taskCount}</span></strong>
                         <span>{completedPercent}% complete</span>
                         <div className="progress-line"><i style={{ width: `${completedPercent}%` }}></i></div>
                       </div>
                       <div className="dashboard-card streak-card">
-                        <div className="dashboard-label">streak</div>
-                        <strong>{streak} day{streak === 1 ? "" : "s"}</strong>
-                        <span>{streak ? "keep the daily run alive" : "finish any task today"}</span>
-                        <div className="streak-dots">{Array.from({ length: 7 }).map((_, i) => <i className={i < Math.min(streak, 7) ? "on" : ""} key={i}></i>)}</div>
+                        <div className="dashboard-label">Streak</div>
+                        <strong>{streak}<span style={{ fontSize: "18px", fontWeight: "500", color: "var(--text-4)" }}> day{streak === 1 ? "" : "s"}</span></strong>
+                        <span>{streak ? "keep going!" : "finish any task today"}</span>
+                        <div className="streak-dots">
+                          {Array.from({ length: 7 }).map((_, i) => <i className={i < Math.min(streak, 7) ? "on" : ""} key={i}></i>)}
+                        </div>
                       </div>
                       <div className="dashboard-card recent-card">
                         <div className="dashboard-row">
-                          <div><div className="dashboard-label">recent runs</div><strong>{historyRows.length}</strong></div>
+                          <div><div className="dashboard-label">Recent Runs</div><strong>{historyRows.length}</strong></div>
                           <button className="mini-action" onClick={clearHistory}>clear</button>
                         </div>
                         {recentRows.length ? recentRows.map((row) => (
@@ -770,13 +732,13 @@
                             <b>{row.title}</b>
                             <small>{getPrimaryResult(row)}</small>
                           </button>
-                        )) : <p className="empty-note">Run a task and your history will appear here.</p>}
+                        )) : <p className="empty-note">Complete a task and your runs will appear here.</p>}
                       </div>
                       <div className="dashboard-card badges-card">
-                        <div className="dashboard-label">badges</div>
+                        <div className="dashboard-label">Badges</div>
                         <div className="badge-list">
                           {achievementRows.map((badge, i) => (
-                            <span className={badge.earned ? "badge earned" : "badge"} key={badge.name} style={{ "--delay": `${i * 70}ms` }}>
+                            <span className={badge.earned ? "badge earned" : "badge"} key={badge.name} style={{ animationDelay: `${i * 60}ms` }}>
                               <i>{badge.icon}</i>
                               <b>{badge.name}</b>
                               <small>{badge.detail}</small>
@@ -784,8 +746,11 @@
                           ))}
                         </div>
                       </div>
-                      <div className="dashboard-card theme-card">
-                        <div className="dashboard-label">pastel theme</div>
+                    </section>
+
+                    <div className="dashboard-card reveal-section" style={{ marginBottom: "20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
+                      <div>
+                        <div className="dashboard-label">Theme</div>
                         <div className="theme-switcher">
                           {THEMES.map((t) => (
                             <button className={theme === t.id ? "active" : ""} key={t.id} onClick={() => setTheme(t.id)}>
@@ -794,24 +759,48 @@
                           ))}
                         </div>
                       </div>
-                    </section>
-                    {filtered.map((cat) => {
+                      <div>
+                        <div className="dashboard-label">About</div>
+                        <p style={{ fontSize: "13px", color: "var(--text-3)", lineHeight: "1.6", marginTop: "8px" }}>
+                          Cognitive Lab is a collection of 51 classical psychology tasks. Results are saved locally and never uploaded. Not a clinical instrument — for curiosity and learning only.
+                        </p>
+                      </div>
+                    </div>
+
+                    {CATEGORIES.map((cat) => {
                       const ci = CATEGORIES.findIndex((c) => c.name === cat.name);
                       return (
                         <section className="category-block reveal-section" key={cat.name} style={{ "--accent": categoryVisual(cat.name, ci).accent }}>
-                          <div className="category-label"><span>{categoryVisual(cat.name, ci).icon}</span><strong>{cat.name}</strong><i></i><b>{cat.tasks.length}</b></div>
+                          <div className="category-label">
+                            <span>{categoryVisual(cat.name, ci).icon}</span>
+                            <strong>{cat.name}</strong>
+                            <i></i>
+                            <b>{cat.tasks.length}</b>
+                          </div>
                           <div className="card-grid">
                             {cat.tasks.map((task) => {
                               const ti = CATEGORIES[ci].tasks.findIndex((t) => t.id === task.id);
                               return (
-                                <article className={completedIds.has(task.id) ? "game-card completed" : "game-card"} key={task.id} style={{ "--accent": categoryVisual(cat.name, ci).accent }} onClick={() => chooseTask(task.id)} role="button" tabIndex="0" onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") chooseTask(task.id); }}>
-                                  <button className={favoriteSet.has(task.id) ? "favorite-btn active" : "favorite-btn"} onClick={(e) => toggleFavorite(task.id, e)} aria-label="toggle favorite">{favoriteSet.has(task.id) ? "*" : "+"}</button>
+                                <article
+                                  className={completedIds.has(task.id) ? "game-card completed" : "game-card"}
+                                  key={task.id}
+                                  style={{ "--accent": categoryVisual(cat.name, ci).accent }}
+                                  onClick={() => chooseTask(task.id)}
+                                  role="button"
+                                  tabIndex="0"
+                                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") chooseTask(task.id); }}
+                                >
+                                  <button
+                                    className={favoriteSet.has(task.id) ? "favorite-btn active" : "favorite-btn"}
+                                    onClick={(e) => toggleFavorite(task.id, e)}
+                                    aria-label={favoriteSet.has(task.id) ? "remove from favorites" : "add to favorites"}
+                                  >{favoriteSet.has(task.id) ? "★" : "+"}</button>
                                   <span className="card-icon">{categoryVisual(cat.name, ci).icon}</span>
                                   <span className="card-index">№ {roman[ci]}.{ti + 1}</span>
                                   <strong>{task.title}</strong>
                                   <em>{task.cite}</em>
                                   <p>{task.desc}</p>
-                                  <small>{completedIds.has(task.id) ? "completed" : "not completed"} · {task.measures}</small>
+                                  <small>{task.measures}</small>
                                 </article>
                               );
                             })}
@@ -819,29 +808,41 @@
                         </section>
                       );
                     })}
+
                     <section className="lab-atmosphere reveal-section">
                       <CursorField />
                       <Ticker />
                     </section>
-                    <footer className="home-footer">not a clinical instrument · for curiosity only</footer>
+                    <footer className="home-footer">Not a clinical instrument · For curiosity only</footer>
                   </>
                 ) : (
                   <>
-                    <div className="task-breadcrumb">the lab / {roman[activeTask.ci]}. {activeTask.category} / {activeTask.title}</div>
+                    <div className="task-breadcrumb">
+                      <button onClick={goHome} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", padding: 0, fontFamily: "inherit", fontSize: "inherit", letterSpacing: "inherit", textTransform: "inherit" }}>
+                        the lab
+                      </button>
+                      {" / "}{roman[activeTask.ci]}. {activeTask.category}{" / "}{activeTask.title}
+                    </div>
                     <section className="task-headbar">
                       <h2>{activeTask.title}</h2>
                       <div className="citebox">
                         <strong>{activeTask.cite}</strong>
                         <span>measures · {activeTask.measures}</span>
-                        <button className={favoriteSet.has(activeTask.id) ? "favorite-wide active" : "favorite-wide"} onClick={(e) => toggleFavorite(activeTask.id, e)}>{favoriteSet.has(activeTask.id) ? "favorited" : "add favorite"}</button>
+                        <button
+                          className={favoriteSet.has(activeTask.id) ? "favorite-wide active" : "favorite-wide"}
+                          onClick={(e) => toggleFavorite(activeTask.id, e)}
+                        >{favoriteSet.has(activeTask.id) ? "★ Favorited" : "+ Add Favorite"}</button>
                       </div>
                     </section>
                     <section className="history-block">
-                      <h3><i></i>the story · {activeTask.who}</h3>
+                      <h3><i></i>The Story · {activeTask.who}</h3>
                       <p>{activeTask.history}</p>
                     </section>
                     <section className="task-info-panel">
-                      <div><span>about</span><p>{activeTask.desc}</p></div>
+                      <div>
+                        <span>about this task</span>
+                        <p>{activeTask.desc}</p>
+                      </div>
                       <dl>
                         <div><dt>domain</dt><dd>{activeTask.category}</dd></div>
                         <div><dt>estimate</dt><dd>{window.TaskHelpers.taskEstimate(activeTask)}</dd></div>
@@ -856,12 +857,19 @@
                 )}
               </div>
             </main>
+
             {!activeTask && showStickyStart && (
               <button className="sticky-start-btn" onClick={() => chooseTask(recommendedTask.id)}>
                 <span>start a task</span>
                 <strong>{recommendedTask.title}</strong>
               </button>
             )}
+
+            <BottomNav
+              activeView={bnav_view}
+              goHome={goHome}
+              openTasks={() => setMobileOpen(true)}
+            />
           </div>
         </>
       );

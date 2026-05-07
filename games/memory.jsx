@@ -22,7 +22,14 @@ function DigitSpan() {
     else { setErrors(errors + 1); run(level); }
   }
   return (
-    <GameShell cite="Jacobs, 1887" instructions="type the flashed digits back in order" phase={phase} headline="hold the string" explain="Digits appear one at a time. When the stage clears, type the whole sequence." onBegin={begin} onReset={begin} footer={`level ${level} · errors ${errors}/2`} results={[{ label: "best span", value: best }, { label: "final length", value: level }, { label: "errors", value: errors }]} doneText="Digit span is the old pocket ruler of immediate verbal memory.">
+    <GameShell cite="Jacobs, 1887" instructions={
+        <ol>
+          <li>Digits flash one at a time on screen.</li>
+          <li>When the display clears, <strong>type all the digits in order</strong> and submit.</li>
+          <li>Each correct round adds one more digit to the next sequence.</li>
+          <li>Two errors end the task — see how long a string you can hold.</li>
+        </ol>
+      } phase={phase} headline="hold the string" explain="Digits appear one at a time. When the stage clears, type the whole sequence." onBegin={begin} onReset={begin} footer={`level ${level} · errors ${errors}/2`} results={[{ label: "best span", value: best }, { label: "final length", value: level }, { label: "errors", value: errors }]} doneText="Digit span is the old pocket ruler of immediate verbal memory.">
       <div className="center-stack">
         <div className="mono-big">{show || "· · ·"}</div>
         {!show && <><input className="text-input" value={answer} onChange={(e) => setAnswer(e.target.value.replace(/\D/g, ""))} autoFocus="autoFocus" /><button className="primary-btn" onClick={submit}>submit →</button></>}
@@ -52,7 +59,14 @@ function Corsi() {
     }
   }
   return (
-    <GameShell cite="Corsi, 1972" instructions="click the blocks back in the same order" phase={phase} headline="remember the path" explain="Nine blocks light in a spatial sequence. Give the route back." onBegin={begin} onReset={begin} footer={`span ${level} · clicks ${clicks.length}/${seq.length}`} results={[{ label: "best span", value: best }, { label: "attempted", value: level }, { label: "blocks", value: 9 }]} doneText="Corsi swaps spoken memory for spatial memory: no digits, only places.">
+    <GameShell cite="Corsi, 1972" instructions={
+        <ol>
+          <li>Nine blocks are arranged on screen.</li>
+          <li>Watch them light up in a <strong>spatial sequence</strong>.</li>
+          <li>After the display, <strong>click the blocks in the same order</strong>.</li>
+          <li>Sequences grow by one each correct round — one error ends the task.</li>
+        </ol>
+      } phase={phase} headline="remember the path" explain="Nine blocks light in a spatial sequence. Give the route back." onBegin={begin} onReset={begin} footer={`span ${level} · clicks ${clicks.length}/${seq.length}`} results={[{ label: "best span", value: best }, { label: "attempted", value: level }, { label: "blocks", value: 9 }]} doneText="Corsi swaps spoken memory for spatial memory: no digits, only places.">
       <div className="grid-board" style={{ gridTemplateColumns: "repeat(3, 64px)" }}>
         {Array.from({ length: 9 }, (_, n) => <button key={n} className={lit === n ? "memory-block on" : "memory-block"} onClick={() => tap(n)}></button>)}
       </div>
@@ -84,7 +98,14 @@ function Sternberg() {
     window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
   }, [phase, showSet, set, probe, started, rows, trial]);
   return (
-    <GameShell cite="Sternberg, 1966" instructions={<><span className="kbd">Y</span> in set <span className="kbd">N</span> absent</>} phase={phase} headline="scan memory" explain="A short set appears, then a probe asks whether it was there." onBegin={begin} onReset={begin} footer={`trial ${Math.min(trial + 1, 18)}/18 · set size ${set.length}`} results={[{ label: "mean RT", value: `${mean(rows.map((r) => r.rt))} ms` }, { label: "small sets", value: `${mean(rows.filter((r) => r.size <= 3).map((r) => r.rt))} ms` }, { label: "large sets", value: `${mean(rows.filter((r) => r.size > 3).map((r) => r.rt))} ms` }]} doneText="Sternberg's signature result is a near-linear rise in RT as memory set size grows.">
+    <GameShell cite="Sternberg, 1966" instructions={
+        <ol>
+          <li>A set of digits appears briefly, then disappears.</li>
+          <li>A single <strong>probe digit</strong> is then shown.</li>
+          <li>Press <span className="kbd">Y</span> if it was in the set · <span className="kbd">N</span> if not.</li>
+          <li>18 trials — set size varies from 1 to 6.</li>
+        </ol>
+      } phase={phase} headline="scan memory" explain="A short set appears, then a probe asks whether it was there." onBegin={begin} onReset={begin} footer={`trial ${Math.min(trial + 1, 18)}/18 · set size ${set.length}`} results={[{ label: "mean RT", value: `${mean(rows.map((r) => r.rt))} ms` }, { label: "small sets", value: `${mean(rows.filter((r) => r.size <= 3).map((r) => r.rt))} ms` }, { label: "large sets", value: `${mean(rows.filter((r) => r.size > 3).map((r) => r.rt))} ms` }]} doneText="Sternberg's signature result is a near-linear rise in RT as memory set size grows.">
       <div className="mono-big">{showSet ? set.join(" ") : probe}</div>
     </GameShell>
   );
@@ -103,7 +124,14 @@ function PairedAssociates() {
     if (i >= pairs.length - 1) setPhase("done"); else setI(i + 1);
   }
   return (
-    <GameShell cite="Calkins, 1894" instructions="study the pairs, then type each missing partner" phase={phase} headline="make a link" explain="Learn six odd word pairs. The cue will ask for its companion." onBegin={begin} onReset={begin} footer={study ? "study window · 6 seconds" : `cue ${i + 1}/6`} results={[{ label: "recalled", value: `${score}/6` }, { label: "pairs", value: 6 }, { label: "method", value: "cue" }]} doneText="Paired associates make learning visible as a newly forged bond between two arbitrary things.">
+    <GameShell cite="Calkins, 1894" instructions={
+        <ol>
+          <li>Six word pairs are shown together for 6 seconds — study them.</li>
+          <li>The pairs then disappear and you are shown the <strong>first word</strong> of each pair.</li>
+          <li>Type its partner and submit.</li>
+          <li>6 cues in total — spelling must match exactly.</li>
+        </ol>
+      } phase={phase} headline="make a link" explain="Learn six odd word pairs. The cue will ask for its companion." onBegin={begin} onReset={begin} footer={study ? "study window · 6 seconds" : `cue ${i + 1}/6`} results={[{ label: "recalled", value: `${score}/6` }, { label: "pairs", value: 6 }, { label: "method", value: "cue" }]} doneText="Paired associates make learning visible as a newly forged bond between two arbitrary things.">
       <div className="center-stack">
         {study ? <div className="pill-row">{pairs.map((p) => <span className="pill" key={p[0]}>{p[0]} - {p[1]}</span>)}</div> : <><div className="task-headline">{pairs[i][0]} → ?</div><input className="text-input" value={answer} onChange={(e) => setAnswer(e.target.value)} /><button className="primary-btn" onClick={submit}>answer →</button></>}
       </div>
