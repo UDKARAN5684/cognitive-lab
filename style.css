@@ -300,6 +300,8 @@ svg { display: block; }
   z-index: 1;
 }
 .home-brand.active { background: var(--blue-light); border-color: var(--blue-mid); }
+.home-glyph { color: var(--blue); font-family: var(--serif); font-style: italic; font-size: 16px; }
+
 /* === MAIN CONTENT AREA === */
 .main {
   position: fixed;

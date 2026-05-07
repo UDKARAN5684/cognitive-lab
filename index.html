@@ -660,6 +660,7 @@
     function Brand({ onClick, home, active }) {
       return (
         <button className={home ? `brand home-brand${active ? " active" : ""}` : "brand"} onClick={onClick} aria-label="go home">
+          {home && <span className="home-glyph">⌂</span>}
           <span className="brand-dot" aria-hidden="true"></span>
           <span className="wordmark">
             <em className="word-serif">cognitive</em>
