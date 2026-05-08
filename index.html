@@ -212,6 +212,7 @@
           <section className="game-shell">
             <div className="task-stage">
               <div className="task-card">
+                <button onClick={() => window._labGoHome?.()} className="ghost-btn" style={{ marginBottom: 12, padding: "6px 12px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>← Back to lab</button>
                 <div className="task-meta">
                   <a href={`https://scholar.google.com/scholar?q=${encodeURIComponent(cite)}`} target="_blank" rel="noopener noreferrer" className="cite-link">{cite} ↗</a>
                 </div>
@@ -251,6 +252,7 @@
           <section className="game-shell">
             <div className="task-stage">
               <div className="task-card task-results">
+                <button onClick={() => window._labGoHome?.()} className="ghost-btn" style={{ marginBottom: 12, padding: "6px 12px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}>← Back to lab</button>
                 <div className="task-meta">
                   <a href={`https://scholar.google.com/scholar?q=${encodeURIComponent(cite)}`} target="_blank" rel="noopener noreferrer" className="cite-link">{cite} ↗</a>
                 </div>
@@ -850,6 +852,60 @@
       );
     }
 
+    function TasksPage({ goHome, chooseTask, completedIds, search, setSearch }) {
+      return (
+        <div style={{ padding: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+            <button className="ghost-btn" onClick={goHome} style={{ padding: "8px 14px", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>← Back</button>
+            <h2 style={{ margin: 0, flex: 1, fontSize: 20 }}>All Tasks</h2>
+            <input
+              placeholder="search tasks…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="sidebar-search-input"
+              style={{ minWidth: 160 }}
+            />
+          </div>
+          {CATEGORIES.map((cat, ci) => {
+            const term = search.toLowerCase().trim();
+            const filtered = term
+              ? cat.tasks.filter(t => t.title.toLowerCase().includes(term) || (t.measures || "").toLowerCase().includes(term))
+              : cat.tasks;
+            if (!filtered.length) return null;
+            return (
+              <section key={cat.name} style={{ marginBottom: 24 }}>
+                <div className="category-label">
+                  <span>{categoryVisual(cat.name, ci).icon}</span>
+                  <strong>{roman[ci]} · {cat.name}</strong>
+                  <i></i>
+                  <b>{cat.tasks.length}</b>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8, marginTop: 10 }}>
+                  {filtered.map(task => (
+                    <button
+                      key={task.id}
+                      onClick={() => chooseTask(task.id)}
+                      style={{
+                        textAlign: "left", background: "var(--surface)",
+                        border: `1px solid ${completedIds.has(task.id) ? "var(--green)" : "var(--border)"}`,
+                        borderRadius: "var(--radius)", padding: "12px 14px",
+                        cursor: "pointer", color: "var(--text)", width: "100%",
+                        transition: "var(--transition)"
+                      }}
+                    >
+                      <strong style={{ display: "block", fontSize: 13, marginBottom: 3 }}>{task.title}</strong>
+                      <em style={{ fontSize: 11, color: "var(--text-3)", fontStyle: "normal" }}>{task.measures}</em>
+                      {completedIds.has(task.id) && <span style={{ display: "block", fontSize: 10, color: "var(--green)", marginTop: 4, fontWeight: 600 }}>✓ done</span>}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      );
+    }
+
     function BottomNav({ activeView, goHome, openTasks }) {
       return (
         <nav className="bottom-nav" aria-label="main navigation">
@@ -882,6 +938,7 @@
       const [darkMode, setDarkMode] = window.LabStore.useStoredState("cognitive-lab.dark.v1", false);
       const [search, setSearch] = useState("");
       const [batteryId, setBatteryId] = useState(null);
+      const [tasksView, setTasksView] = useState(false);
       const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("clab.onboarded"));
 
       const activeTask = allTasks.find((t) => t.id === activeId);
@@ -941,8 +998,10 @@
         return () => window.removeEventListener("hashchange", onHash);
       }, []);
 
-      function goHome() { setActiveId(""); setBatteryId(null); window.history.replaceState(null, "", location.pathname); setMobileOpen(false); }
-      function chooseTask(id) { location.hash = id; setActiveId(id); setMobileOpen(false); }
+      function goHome() { setActiveId(""); setBatteryId(null); window.history.replaceState(null, "", location.pathname); setMobileOpen(false); setTasksView(false); window._labGoHome = null; }
+      useEffect(() => { window._labGoHome = goHome; }, []);
+      function goTasks() { setActiveId(""); setBatteryId(null); window.history.replaceState(null, "", location.pathname); setMobileOpen(false); setTasksView(true); }
+      function chooseTask(id) { location.hash = id; setActiveId(id); setMobileOpen(false); setTasksView(false); }
       function toggleFavorite(id, e) { e?.stopPropagation?.(); setFavorites((old) => old.includes(id) ? old.filter((x) => x !== id) : [id, ...old]); }
       function clearHistory() { setHistoryRows([]); }
 
@@ -952,7 +1011,7 @@
         return idx >= 0 && idx < activeBattery.tasks.length - 1 ? activeBattery.tasks[idx + 1] : null;
       })() : null;
 
-      const bnav_view = activeTask ? "task" : "home";
+      const bnav_view = activeTask ? "task" : tasksView ? "tasks" : "home";
 
       return (
         <>
@@ -974,11 +1033,8 @@
               </div>
             </div>
           )}
-          <div className={`app-shell${activeTask ? " task-view" : " home-view"}${mobileOpen ? " nav-open" : ""}`}>
+          <div className={`app-shell${activeTask ? " task-view" : tasksView ? " tasks-view" : " home-view"}${mobileOpen ? " nav-open" : ""}`}>
             <header className="shell-header">
-              <button className="mobile-menu-btn" onClick={() => setMobileOpen(true)} aria-label="open task menu">
-                <span></span><span></span><span></span>
-              </button>
               <Brand onClick={goHome} />
               <div className="header-meta">
                 <span>{taskCount} tasks</span>
@@ -1023,7 +1079,15 @@
 
             <main className="main" id="main-content">
               <div className="main-inner">
-                {!activeTask ? (
+                {!activeTask && tasksView ? (
+                  <TasksPage
+                    goHome={goHome}
+                    chooseTask={chooseTask}
+                    completedIds={completedIds}
+                    search={search}
+                    setSearch={setSearch}
+                  />
+                ) : !activeTask ? (
                   <>
                     <section className="home-command-deck reveal-section">
                       <div className="home-hero">
@@ -1222,11 +1286,9 @@
                   </>
                 ) : (
                   <>
-                    <div className="task-breadcrumb">
-                      <button onClick={goHome} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", padding: 0, fontFamily: "inherit", fontSize: "inherit", letterSpacing: "inherit", textTransform: "inherit" }}>
-                        the lab
-                      </button>
-                      {" / "}{roman[activeTask.ci]}. {activeTask.category}{" / "}{activeTask.title}
+                    <div className="task-breadcrumb" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <button onClick={goHome} className="ghost-btn" style={{ padding: "6px 12px", fontSize: 13, display: "inline-flex", alignItems: "center", gap: 5 }}>← Back</button>
+                      <span style={{ opacity: 0.5 }}>{roman[activeTask.ci]}. {activeTask.category} · {activeTask.title}</span>
                     </div>
                     <section className="task-headbar">
                       <h2>{activeTask.title}</h2>
@@ -1287,7 +1349,7 @@
             <BottomNav
               activeView={bnav_view}
               goHome={goHome}
-              openTasks={() => setMobileOpen(true)}
+              openTasks={goTasks}
             />
           </div>
         </>
